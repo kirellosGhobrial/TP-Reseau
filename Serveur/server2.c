@@ -133,8 +133,6 @@ static void app(void)
                         char * pwd = strtok(NULL," ");
                         printf("%s %s logging in\n",username, pwd);
                         int log = login(clients, client, actual, username, pwd);
-                        printf("name %s ",client.name);
-                        printf("name 2 %s", clients[i].name);
                         switch (log)
                         {
                         case 0:
@@ -153,6 +151,8 @@ static void app(void)
                            break;
                         }
                      }
+                  }else if(client.connected==0){
+                     send_notification(&client, 1, "You are not connected, please login to be able to see and receive messages\n /login <username> <password>\n");
                   }
                   else{
                      send_message_to_all_clients(clients, client, actual, buffer, 0);
@@ -193,7 +193,10 @@ static void send_notification(Client *clients, int actual, char* buffer){
       write_client(clients[i].sock, buffer);
    }
 }
-static void send_message_to_all_clients(Client *clients, Client sender, int actual, const char *buffer, char from_server)
+
+
+//le param groupID ne sert à rien pour le moment
+static void send_message_to_all_clients(Client *clients, Client sender, int actual, const char *buffer, int groupID)
 {
    int i = 0;
    char message[BUF_SIZE];
@@ -201,16 +204,14 @@ static void send_message_to_all_clients(Client *clients, Client sender, int actu
    for(i = 0; i < actual; i++)
    {
       /* we don't send message to the sender */
-      if(sender.sock != clients[i].sock ) //&& clients[i].connected==1);
-      {
-         if(from_server == 0)
-         {
+      if(sender.sock != clients[i].sock){
+         if(clients[i].connected==1){
             strncpy(message, sender.name, BUF_SIZE - 1);
             strncat(message, " : ", sizeof message - strlen(message) - 1);
+            strncat(message, buffer, sizeof message - strlen(message) - 1);
+            write_client(clients[i].sock, message);
          }
-         strncat(message, buffer, sizeof message - strlen(message) - 1);
-         write_client(clients[i].sock, message);
-      }
+      } 
    }
 }
 
@@ -284,20 +285,19 @@ static int login(Client* clients, Client cl, int actual, char* username, char* p
    //verify if this client is already logged in
    for(int i=0; i<actual; i++){
       if(!strcmp(clients[i].name,username)){
-         res = 3;
+         res = 3;   
+         return res;
       }
    }
-   printf("checked logged in \n");
+   
    //read the database
    FILE * file;
    file = fopen("login.txt","a+");
    char u[BUF_SIZE];
    char p[BUF_SIZE];
    
-   printf("checking database \n");
    while(fscanf(file,"%s %s \n",u,p)!= EOF){
       if(!strcmp(u,username)){
-         printf("username found \n");
          if(!strcmp(p,pwd)){
             for(int i=0; i<actual; i++){
                if(cl.sock == clients[i].sock){
@@ -316,8 +316,6 @@ static int login(Client* clients, Client cl, int actual, char* username, char* p
       }
    }
    if(res == 0){
-      
-      printf("username created \n");
       fprintf(file,"%s %s \n",username,pwd);
       for(int i=0; i<actual; i++){
          if(cl.sock == clients[i].sock){
@@ -328,7 +326,6 @@ static int login(Client* clients, Client cl, int actual, char* username, char* p
          }
       }
    }
-   printf("%d login result", res);
    fclose(file);
    return res;
 }
