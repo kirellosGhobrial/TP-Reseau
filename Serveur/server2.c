@@ -132,7 +132,9 @@ static void app(void)
                         char * username = strtok(NULL," ");
                         char * pwd = strtok(NULL," ");
                         printf("%s %s logging in\n",username, pwd);
-                        int log = login(clients, &client, actual, username, pwd);
+                        int log = login(clients, client, actual, username, pwd);
+                        printf("name %s ",client.name);
+                        printf("name 2 %s", clients[i].name);
                         switch (log)
                         {
                         case 0:
@@ -276,7 +278,7 @@ static void write_client(SOCKET sock, const char *buffer)
 // 1 logged in sucessfully
 // 2 wrong password
 // 3 already logged in
-static int login(Client* clients, Client* cl, int actual, char* username, char* pwd ){
+static int login(Client* clients, Client cl, int actual, char* username, char* pwd ){
    int res = 0;
    
    //verify if this client is already logged in
@@ -289,17 +291,22 @@ static int login(Client* clients, Client* cl, int actual, char* username, char* 
    //read the database
    FILE * file;
    file = fopen("login.txt","a+");
-   char * u;
-   char * p;
+   char u[BUF_SIZE];
+   char p[BUF_SIZE];
    
    printf("checking database \n");
    while(fscanf(file,"%s %s \n",u,p)!= EOF){
       if(!strcmp(u,username)){
          printf("username found \n");
          if(!strcmp(p,pwd)){
-            cl->connected=1;
-            strcpy(cl->name,username);
-            strcpy(cl->pwd, pwd);
+            for(int i=0; i<actual; i++){
+               if(cl.sock == clients[i].sock){
+                  clients[i].connected=1;
+                  strcpy(clients[i].name,username);
+                  strcpy(clients[i].pwd, pwd);
+                  break;
+               }
+            }
             res = 1;
             break;
          }else{
@@ -312,9 +319,14 @@ static int login(Client* clients, Client* cl, int actual, char* username, char* 
       
       printf("username created \n");
       fprintf(file,"%s %s \n",username,pwd);
-      cl->connected=1;
-      strcpy(cl->name,username);
-      strcpy(cl->pwd, pwd);
+      for(int i=0; i<actual; i++){
+         if(cl.sock == clients[i].sock){
+            clients[i].connected=1;
+            strcpy(clients[i].name,username);
+            strcpy(clients[i].pwd, pwd);
+            break;
+         }
+      }
    }
    printf("%d login result", res);
    fclose(file);
