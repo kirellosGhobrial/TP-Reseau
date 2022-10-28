@@ -25,41 +25,14 @@ static void end(void)
 #endif
 }
 
-static void login(char* username, char* password) 
-{
-   printf("Enter your username: \n");
-   scanf("%s", username);
-   printf("Enter your password: \n");
-   scanf("%s", password);
-}
-
-static void app(const char *address, const char *name)
+static void app(const char *address)
 {
    SOCKET sock = init_connection(address);
    char buffer[BUF_SIZE];
-   int loggedIn = 0;
-   char username[BUF_SIZE];
-   char password[BUF_SIZE];
-
+   Request request;
+   Response response;
 
    fd_set rdfs;
-
-   /* send our name */
-   write_server(sock, " ");
-   // write_server(sock, name);
-   // while(!loggedIn)
-   // {
-   //    login(username, password);
-   //    strcat(strcat(strcat(strcpy(buffer, "/login "), username), " "), password);
-   //    write_server(sock, buffer);
-   //    read_server(sock, buffer);
-   //    if(strcmp(buffer, "1") == 0) {
-   //       loggedIn = 1;
-   //    }
-   //    else {
-   //       printf("Invalid username or password. Please try again.");
-   //    }
-   // }
 
    while(1)
    {
@@ -80,32 +53,12 @@ static void app(const char *address, const char *name)
       /* something from standard input : i.e keyboard */
       if(FD_ISSET(STDIN_FILENO, &rdfs))
       {
-         fgets(buffer, BUF_SIZE - 1, stdin);
-         {
-            char *p = NULL;
-            p = strstr(buffer, "\n");
-            if(p != NULL)
-            {
-               *p = 0;
-            }
-            else
-            {
-               /* fclean */
-               buffer[BUF_SIZE - 1] = 0;
-            }
-         }
-         write_server(sock, buffer);
+         handle_user_input(sock, &request);
       }
       else if(FD_ISSET(sock, &rdfs))
       {
-         int n = read_server(sock, buffer);
-         /* server down */
-         if(n == 0)
-         {
-            printf("Server disconnected !\n");
-            break;
-         }
-         puts(buffer);
+         strcpy(response.params[0], "");
+         handle_server_response(sock, &response);
       }
    }
 
@@ -149,41 +102,144 @@ static void end_connection(int sock)
    closesocket(sock);
 }
 
-static int read_server(SOCKET sock, char *buffer)
-{
+static int read_server(SOCKET sock, Response *res)
+{  
    int n = 0;
 
-   if((n = recv(sock, buffer, BUF_SIZE - 1, 0)) < 0)
+   if((n = recv(sock, res, sizeof(*res), 0)) < 0)
    {
       perror("recv()");
       exit(errno);
    }
 
-   buffer[n] = 0;
-
    return n;
 }
 
-static void write_server(SOCKET sock, const char *buffer)
+static void write_server(SOCKET sock, Request *req)
 {
-   if(send(sock, buffer, strlen(buffer), 0) < 0)
+   if(send(sock, req, sizeof(*req), 0) < 0)
    {
       perror("send()");
       exit(errno);
    }
 }
 
+static void handle_user_input(SOCKET sock, Request *req)
+{
+   char buffer[BUF_SIZE];
+   Message msg;
+   fgets(buffer, BUF_SIZE - 1, stdin);
+   int len = strlen (buffer) - 1;
+   buffer[len] = '\0';
+
+   if (strncmp(buffer, "/quit", 5) == 0)
+   {
+      printf("Bye !\n");
+      end_connection(sock);
+      exit(0);
+   }
+   else if (strncmp(buffer, "/help", 5) == 0)
+   {
+      // /help
+   }
+   else if (strncmp(buffer, "/register", 9) == 0)
+   {
+      char *name = strtok(buffer + 9, " ");
+      char *password = strtok(NULL, "");
+      if (name == NULL || password == NULL)
+      {
+         printf("Usage : /login <name> <password>\n");
+      }
+      else
+      {
+         req->type = USER_REGISTER;
+         req->paramCount = 2;
+         strcpy(req->params[0], name);
+         strcpy(req->params[1], password);
+         write_server(sock, req);
+      }
+   }
+   else if (strncmp(buffer, "/login", 6) == 0)
+   {
+      char *name = strtok(buffer + 6, " ");
+      char *password = strtok(NULL, "");
+      if (name == NULL || password == NULL)
+      {
+         printf("Usage : /login <name> <password>\n");
+      }
+      else
+      {
+         req->type = USER_LOGIN;
+         req->paramCount = 2;
+         strcpy(req->params[0], name);
+         strcpy(req->params[1], password);
+         write_server(sock, req);
+      }
+   }
+   else if (strncmp(buffer, "/private", 8) == 0)
+   {
+      char *name = strtok(buffer + 8, " ");
+      char *input_msg = strtok(NULL, "");
+      msg.type = PRIVATE_MESSAGE;
+      strcpy(msg.receiver, name);
+      strcpy(msg.content, input_msg);
+      req->type = SEND_MESSAGE;
+      req->msg = &msg;
+      write_server(sock, req);
+   }
+   else if (strncmp(buffer, "/public", 7) == 0)
+   {
+      char *input_msg = strtok(buffer + 7, "");
+      msg.type = PUBLIC_MESSAGE;
+      strcpy(msg.content, input_msg);
+      req->type = SEND_MESSAGE;
+      req->msg = &msg;
+      write_server(sock, req);
+   }
+   else
+   {
+      printf(RED "Unknown command : %s" RESET "\n", buffer);
+      printf("Type /help to see the list of available commands.\n");
+   }
+}
+
+static void handle_server_response(SOCKET sock, Response *res)
+{
+   int n = read_server(sock, res);
+   /* server down */
+   if(n == 0)
+   {
+      printf("Server disconnected !\n");
+      exit(0);
+   }
+
+   switch (res->type)
+   {
+   case OK:
+      printf(GRN "%s" RESET "\n", res->params[0]);
+      break;
+   case MESSAGE:
+      printf("Message received : %s\n", res->msg->content);
+      break;
+   case ERROR:
+      printf(RED "Error : %s" RESET "\n", res->params[0]);
+      break;
+   default:
+      break;
+   }
+}
+
 int main(int argc, char **argv)
 {
-   if(argc < 2)
+   if (argv[1] == NULL)
    {
-      printf("Usage : %s [address] [pseudo]\n", argv[0]);
-      return EXIT_FAILURE;
+      printf("Usage : %s <address>\n", argv[0]);
+      return 1;
    }
 
    init();
 
-   app(argv[1], argv[2]);
+   app(argv[1]);
 
    end();
 

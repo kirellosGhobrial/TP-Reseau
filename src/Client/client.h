@@ -7,6 +7,7 @@
 
 #elif defined (linux)
 
+#include "../protocol/protocol.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -32,12 +33,20 @@ typedef struct in_addr IN_ADDR;
 
 #define BUF_SIZE 1024
 
+#define RED  "\x1B[31m"
+#define GRN  "\x1B[32m"
+#define YEL  "\x1B[33m"
+#define BLU  "\x1B[34m"
+#define RESET "\033[0m"
+
 static void init(void);
 static void end(void);
-static void app(const char *address, const char *name);
+static void app(const char *address);
 static int init_connection(const char *address);
 static void end_connection(int sock);
-static int read_server(SOCKET sock, char *buffer);
-static void write_server(SOCKET sock, const char *buffer);
+static int read_server(SOCKET sock, Response *res);
+static void write_server(SOCKET sock, Request *req);
+static void handle_user_input(SOCKET sock, Request *req);
+static void handle_server_response(SOCKET sock, Response *res);
 
 #endif /* guard */

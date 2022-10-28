@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #include <unistd.h> /* close */
 #include <netdb.h> /* gethostbyname */
+#include "../protocol/protocol.h"
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
 #define closesocket(s) close(s)
@@ -40,12 +41,20 @@ static void end(void);
 static void app(void);
 static int init_connection(void);
 static void end_connection(int sock);
-static int read_client(SOCKET sock, char *buffer);
-static void write_client(SOCKET sock, const char *buffer);
-static void send_message_to_all_clients(Client *clients, Client sender, int actual, const char *buffer, int groupID);
-static int login(Client* clients, Client cl, int actual, char* username, char* pwd );
+static int read_client(SOCKET sock, Request *req);
+static void write_client(SOCKET sock, Response *res);
 static void remove_client(Client *clients, int to_remove, int *actual);
 static void clear_clients(Client *clients, int actual);
-static void send_notification(Client *clients, int actual, char* buffer);
+
+static void handle_request(Client *clients, Client *sender, Request *req, int actual);
+static void handle_login(Client *sender, Request *req);
+static void handle_register(Client *sender, Request *req);
+
+
+static void handle_message(Client *clients, Client *sender, Message *msg, int actual);
+static void send_public_message(Client *clients, Response *res, int actual);
+static void send_private_message(Client *clients, Response *res, int actual);
+static void send_group_message(Client *clients, Response *res, int actual);
+
 
 #endif /* guard */

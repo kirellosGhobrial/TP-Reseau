@@ -4,7 +4,9 @@
 #include <string.h>
 
 #include "server.h"
-#include "client.h"
+
+Client mockClients[10];
+int mockClientsCount = 0;
 
 static void init(void)
 {
@@ -30,6 +32,7 @@ static void app(void)
 {
    SOCKET sock = init_connection();
    char buffer[BUF_SIZE];
+   Request request;
    /* the index for the array */
    int actual = 0;
    int max = sock;
@@ -37,6 +40,11 @@ static void app(void)
    Client clients[MAX_CLIENTS];
 
    fd_set rdfs;
+
+   // Mock database
+   strncpy(mockClients[0].name, "John", 4);
+   strncpy(mockClients[0].password, "1234", 4);
+   mockClientsCount++;
 
    while(1)
    {
@@ -72,17 +80,10 @@ static void app(void)
          /* new client */
          SOCKADDR_IN csin = { 0 };
          size_t sinsize = sizeof csin;
-         int csock = accept(sock, (SOCKADDR *)&csin, &sinsize);
+         int csock = accept(sock, (SOCKADDR *)&csin, (unsigned int *)&sinsize);
          if(csock == SOCKET_ERROR)
          {
             perror("accept()");
-            continue;
-         }
-
-         /* after connecting the client sends its name */
-         if(read_client(csock, buffer) == -1)
-         {
-            /* disconnected */
             continue;
          }
 
@@ -92,7 +93,7 @@ static void app(void)
          FD_SET(csock, &rdfs);
 
          Client c = { csock };
-         //strncpy(c.name, buffer, BUF_SIZE - 1);
+         // strncpy(c.name, buffer, BUF_SIZE - 1);
          clients[actual] = c;
          actual++;
       }
@@ -105,58 +106,16 @@ static void app(void)
             if(FD_ISSET(clients[i].sock, &rdfs))
             {
                Client client = clients[i];
-               int c = read_client(clients[i].sock, buffer);
+               int c = read_client(clients[i].sock, &request);
                /* client disconnected */
                if(c == 0)
                {
                   closesocket(clients[i].sock);
                   remove_client(clients, i, &actual);
-                  strncpy(buffer, client.name, BUF_SIZE - 1);
-                  strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
-                  send_message_to_all_clients(clients, client, actual, buffer, 1);
                }
                else
                {
-                  char firstChar = buffer[0];
-                  if(firstChar == '/'){
-                     char* command = strtok(buffer," ");
-                     if(!strcmp(command,"/send")){
-                        char * reciever = strtok(NULL," ");
-                        char * msg = strtok(NULL," ");
-                        for(int j=0; j<actual; j++){
-                           if(!strcmp(clients[j].name,reciever)){
-                              send_message_to_all_clients(&(clients[j]), client, 1, msg, 0);
-                           }
-                        }
-                     }else if(!strcmp(command,"/login")){
-                        char * username = strtok(NULL," ");
-                        char * pwd = strtok(NULL," ");
-                        printf("%s %s logging in\n",username, pwd);
-                        int log = login(clients, client, actual, username, pwd);
-                        switch (log)
-                        {
-                        case 0:
-                           send_notification(&client,1,"user not found, new user created");
-                           break;
-                        case 1:
-                           send_notification(&client,1,"logged in sucessfully");
-                           break;
-                        case 2:
-                           send_notification(&client,1,"wrong password");
-                           break;
-                        case 3:
-                           send_notification(&client,1,"this user is already connected");
-                           break;
-                        default:
-                           break;
-                        }
-                     }
-                  }else if(client.connected==0){
-                     send_notification(&client, 1, "You are not connected, please login to be able to see and receive messages\n /login <username> <password>\n");
-                  }
-                  else{
-                     send_message_to_all_clients(clients, client, actual, buffer, 0);
-                  }
+                  handle_request(clients, &client, &request, actual);
                }
                break;
             }
@@ -185,34 +144,151 @@ static void remove_client(Client *clients, int to_remove, int *actual)
    (*actual)--;
 }
 
-
-static void send_notification(Client *clients, int actual, char* buffer){
-   int i = 0;
-   for(i = 0; i < actual; i++)
+static void handle_request(Client *clients, Client *sender, Request *req, int actual)
+{
+   switch(req->type)
    {
-      write_client(clients[i].sock, buffer);
+      case USER_LOGIN:
+         handle_login(sender, req);
+         break;
+      case USER_REGISTER:
+         handle_register(sender, req);
+         break;
+      case SEND_MESSAGE:
+         handle_message(clients, sender, req->msg, actual);
+         break;
+      case CREATE_GROUP:
+         // handle_create_group(sender, req);
+         break;
+      case JOIN_GROUP:
+         // handle_join_group(sender, req);
+         break;
+      case INVITE_USER:
+         // handle_invite_user(sender, req);
+         break;
+      case LIST_USERS:
+         // handle_list_users(sender);
+         break;
+      default:
+         break;
    }
 }
 
+static void handle_login(Client *client, Request *req)
+{
+   char name[BUF_SIZE];
+   char password[BUF_SIZE];
+   strncpy(name, req->params[0], BUF_SIZE - 1);
+   strncpy(password, req->params[1], BUF_SIZE - 1);
 
-//le param groupID ne sert à rien pour le moment
-static void send_message_to_all_clients(Client *clients, Client sender, int actual, const char *buffer, int groupID)
+   Response res;
+   int i = 0;
+   for (i=0; i<mockClientsCount; i++)
+   {
+      if (strcmp(mockClients[i].name, name) == 0 
+         && strcmp(mockClients[i].password, password) == 0)
+      {
+         res.type = OK;
+         res.paramCount = 1;
+         strncpy(res.params[0], "Login successful", 16);
+         strcpy(client->name, name);
+         strcpy(client->password, password);
+         client->logged = 1;
+         write_client(client->sock, &res);
+         return;
+      } 
+   }
+   res.type = ERROR;
+   res.paramCount = 1;
+   strncpy(res.params[0], "Login failed", 12);
+   write_client(client->sock, &res);
+}
+
+static void handle_register(Client *client, Request *req)
+{
+   char name[BUF_SIZE];
+   char password[BUF_SIZE];
+   strncpy(name, req->params[0], BUF_SIZE - 1);
+   strncpy(password, req->params[1], BUF_SIZE - 1);
+
+   Response res;
+   int i = 0;
+   for (i=0; i<mockClientsCount; i++)
+   {
+      if (strcmp(mockClients[i].name, name) == 0)
+      {
+         res.type = ERROR;
+         res.paramCount = 1;
+         strncpy(res.params[0], "Username already exists", 23);
+         write_client(client->sock, &res);
+         return;
+      }
+   }
+   strcpy(client->name, name);
+   strcpy(client->password, password);
+   client->logged = 1;
+   strncpy(mockClients[mockClientsCount].name, name, BUF_SIZE);
+   strncpy(mockClients[mockClientsCount].password, password, BUF_SIZE);
+   mockClientsCount++;
+   res.type = OK;
+   res.paramCount = 1;
+   strncpy(res.params[0], "Register successful", 19);
+   write_client(client->sock, &res);
+}
+
+static void handle_message(Client *clients, Client *sender, Message *msg, int actual)
+{
+   Response res;
+   res.type = MESSAGE;
+   res.paramCount = 0;
+   res.msg = msg;
+   strcpy(res.msg->sender, sender->name);
+
+   switch(msg->type)
+   {
+      case PUBLIC_MESSAGE:
+         send_public_message(clients, &res, actual);
+         break;
+      case PRIVATE_MESSAGE:
+         send_private_message(clients, &res, actual);
+         break;
+      case GROUP_MESSAGE:
+         send_group_message(clients, &res, actual);
+         break;
+      default:
+         break;
+   }
+}
+
+static void send_public_message(Client *clients, Response *res, int actual)
 {
    int i = 0;
-   char message[BUF_SIZE];
-   message[0] = 0;
    for(i = 0; i < actual; i++)
    {
       /* we don't send message to the sender */
-      if(sender.sock != clients[i].sock){
-         if(clients[i].connected==1){
-            strncpy(message, sender.name, BUF_SIZE - 1);
-            strncat(message, " : ", sizeof message - strlen(message) - 1);
-            strncat(message, buffer, sizeof message - strlen(message) - 1);
-            write_client(clients[i].sock, message);
-         }
-      } 
+      if(strcmp (clients[i].name, res->msg->sender) != 0)
+      {
+         write_client(clients[i].sock, res);
+      }
    }
+}
+
+static void send_private_message(Client *clients, Response *res, int actual)
+{
+   int i = 0;
+   for(i=0; i<actual; i++)
+   {
+      if (strcmp (clients[i].name, res->msg->receiver) == 0)
+      {
+         write_client (clients[i].sock, res);
+         break;
+      }
+   }
+}
+
+static void send_group_message(Client *clients, Response *res, int actual)
+{
+
 }
 
 static int init_connection(void)
@@ -250,84 +326,28 @@ static void end_connection(int sock)
    closesocket(sock);
 }
 
-static int read_client(SOCKET sock, char *buffer)
+static int read_client(SOCKET sock, Request *req)
 {
    int n = 0;
 
-   if((n = recv(sock, buffer, BUF_SIZE - 1, 0)) < 0)
+   if((n = recv(sock, req, sizeof(*req), 0)) < 0)
    {
       perror("recv()");
       /* if recv error we disonnect the client */
       n = 0;
    }
 
-   buffer[n] = 0;
-
    return n;
 }
 
-static void write_client(SOCKET sock, const char *buffer)
+static void write_client(SOCKET sock, Response *res)
 {
-   if(send(sock, buffer, strlen(buffer), 0) < 0)
+   if(send(sock, res, sizeof(*res), 0) < 0)
    {
       perror("send()");
       exit(errno);
    }
-}
 
-// 0 user created
-// 1 logged in sucessfully
-// 2 wrong password
-// 3 already logged in
-static int login(Client* clients, Client cl, int actual, char* username, char* pwd ){
-   int res = 0;
-   
-   //verify if this client is already logged in
-   for(int i=0; i<actual; i++){
-      if(!strcmp(clients[i].name,username)){
-         res = 3;   
-         return res;
-      }
-   }
-   
-   //read the database
-   FILE * file;
-   file = fopen("login.txt","a+");
-   char u[BUF_SIZE];
-   char p[BUF_SIZE];
-   
-   while(fscanf(file,"%s %s \n",u,p)!= EOF){
-      if(!strcmp(u,username)){
-         if(!strcmp(p,pwd)){
-            for(int i=0; i<actual; i++){
-               if(cl.sock == clients[i].sock){
-                  clients[i].connected=1;
-                  strcpy(clients[i].name,username);
-                  strcpy(clients[i].pwd, pwd);
-                  break;
-               }
-            }
-            res = 1;
-            break;
-         }else{
-            res = 2;
-            break;
-         }
-      }
-   }
-   if(res == 0){
-      fprintf(file,"%s %s \n",username,pwd);
-      for(int i=0; i<actual; i++){
-         if(cl.sock == clients[i].sock){
-            clients[i].connected=1;
-            strcpy(clients[i].name,username);
-            strcpy(clients[i].pwd, pwd);
-            break;
-         }
-      }
-   }
-   fclose(file);
-   return res;
 }
 
 int main(int argc, char **argv)

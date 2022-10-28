@@ -7,10 +7,16 @@ typedef struct
 {
    SOCKET sock;
    char name[BUF_SIZE];
-   int chatId;
-   char pwd[BUF_SIZE];
-   int connected;
-
+   char password[BUF_SIZE];
+   int logged;
 }Client;
+
+typedef struct
+{
+  int groupID;
+  char groupName[BUF_SIZE];
+  char owner[BUF_SIZE];
+  char *members[BUF_SIZE];
+} Groupe;
 
 #endif /* guard */
