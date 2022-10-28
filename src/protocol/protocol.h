@@ -4,6 +4,14 @@
 #define BUF_SIZE    1024
 #define PARAM_NUMBER 10
 
+typedef struct
+{
+  int groupID;
+  char groupName[BUF_SIZE];
+  char owner[BUF_SIZE];
+  char *members[BUF_SIZE];
+} Groupe;
+
 typedef enum
 {
   PUBLIC_MESSAGE,

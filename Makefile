@@ -17,11 +17,13 @@ $(EXEC_SERVER): $(OBJ_SERVER)
 $(EXEC_CLIENT): $(OBJ_CLIENT)
 	$(CC) -g -o $@ $^
 
-$(OBJ_SERVER): $(C_FILES_SERVER) | build
-	$(CC) -c $< -o $@
-
 $(OBJ_CLIENT): $(C_FILES_CLIENT) | build
-	$(CC) -c $< -o $@
+	$(CC) -g -c $< -o $@
+
+$(OBJ_SERVER): $(C_FILES_SERVER) | build
+	$(CC) -g -c $< -o $@
+
+
 
 build:
 	mkdir -p build
