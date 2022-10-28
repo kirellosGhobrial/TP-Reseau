@@ -5,7 +5,6 @@
 
 #include "server2.h"
 #include "client2.h"
-#include "message.h"
 
 static void init(void)
 {
@@ -199,10 +198,6 @@ static void send_notification(Client *clients, int actual, char* buffer){
 //le param groupID ne sert à rien pour le moment
 static void send_message_to_all_clients(Client *clients, Client sender, int actual, const char *buffer, int groupID)
 {
-
-   Message msg;
-   msg.sender = sender;
-   strcpy(msg.message,buffer);
    int i = 0;
    char message[BUF_SIZE];
    message[0] = 0;
@@ -218,26 +213,6 @@ static void send_message_to_all_clients(Client *clients, Client sender, int actu
          }
       } 
    }
-}
-
-static void saveMessage(Message msg){
-//read the database
-   FILE * file;
-   file = fopen("messages.dat","ab+");
-   fwrite(&msg, sizeof(Message), 1, file);
-   fclose(file);
-}
-
-// shows the last <nb> messages to the client <cl>
-static void showMessages(Client cl, int nb){
-   Message msg;
-   int i=0;
-   FILE * file;
-   file = fopen("messages.dat","ab+");
-   while(fread(&msg, sizeof(Message), 1, file)){
-      send_message_to_all_clients(&cl,msg.sender,1, msg.message,0);
-   }
-   fclose(file);
 }
 
 static int init_connection(void)
@@ -310,20 +285,20 @@ static int login(Client* clients, Client cl, int actual, char* username, char* p
    //verify if this client is already logged in
    for(int i=0; i<actual; i++){
       if(!strcmp(clients[i].name,username)){
-         res = 3;
+         res = 3;   
          return res;
       }
    }
    
    //read the database
    FILE * file;
-   file = fopen("login.dat","ab+");
-   // char u[BUF_SIZE];
-   // char p[BUF_SIZE];
-   Client clTemp;
-   while(fread(&clTemp, sizeof(Client), 1, file)){
-      if(!strcmp(clTemp.name,username)){
-         if(!strcmp(clTemp.pwd,pwd)){
+   file = fopen("login.txt","a+");
+   char u[BUF_SIZE];
+   char p[BUF_SIZE];
+   
+   while(fscanf(file,"%s %s \n",u,p)!= EOF){
+      if(!strcmp(u,username)){
+         if(!strcmp(p,pwd)){
             for(int i=0; i<actual; i++){
                if(cl.sock == clients[i].sock){
                   clients[i].connected=1;
@@ -341,74 +316,19 @@ static int login(Client* clients, Client cl, int actual, char* username, char* p
       }
    }
    if(res == 0){
+      fprintf(file,"%s %s \n",username,pwd);
       for(int i=0; i<actual; i++){
          if(cl.sock == clients[i].sock){
             clients[i].connected=1;
             strcpy(clients[i].name,username);
             strcpy(clients[i].pwd, pwd);
-            fwrite(&(clients[i]), sizeof(Client), 1, file);
             break;
          }
       }
    }
-   if(res == 0 || res == 1){
-      showMessages(cl, 10);
-   }
    fclose(file);
    return res;
 }
-
-
-// static int login(Client* clients, Client cl, int actual, char* username, char* pwd ){
-//    int res = 0;
-   
-//    //verify if this client is already logged in
-//    for(int i=0; i<actual; i++){
-//       if(!strcmp(clients[i].name,username)){
-//          res = 3;   
-//          return res;
-//       }
-//    }
-   
-//    //read the database
-//    FILE * file;
-//    file = fopen("login.txt","ab+");
-//    char u[BUF_SIZE];
-//    char p[BUF_SIZE];
-   
-//    while(fscanf(file,"%s %s \n",u,p)!= EOF){
-//       if(!strcmp(u,username)){
-//          if(!strcmp(p,pwd)){
-//             for(int i=0; i<actual; i++){
-//                if(cl.sock == clients[i].sock){
-//                   clients[i].connected=1;
-//                   strcpy(clients[i].name,username);
-//                   strcpy(clients[i].pwd, pwd);
-//                   break;
-//                }
-//             }
-//             res = 1;
-//             break;
-//          }else{
-//             res = 2;
-//             break;
-//          }
-//       }
-//    }
-//    if(res == 0){
-//       fprintf(file,"%s %s \n",username,pwd);
-//       for(int i=0; i<actual; i++){
-//          if(cl.sock == clients[i].sock){
-//             clients[i].connected=1;
-//             strcpy(clients[i].name,username);
-//             strcpy(clients[i].pwd, pwd);
-//             break;
-//          }
-//       }
-//    }
-//    fclose(file);
-//    return res;
-// }
 
 int main(int argc, char **argv)
 {
