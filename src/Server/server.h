@@ -34,7 +34,13 @@ typedef struct in_addr IN_ADDR;
 
 #define BUF_SIZE    1024
 
-#include "client.h"
+typedef struct
+{
+   SOCKET sock;
+   char name[BUF_SIZE];
+   char password[BUF_SIZE];
+   int logged;
+}Client;
 
 static void init(void);
 static void end(void);
@@ -47,7 +53,7 @@ static void remove_client(Client *clients, int to_remove, int *actual);
 static void clear_clients(Client *clients, int actual);
 
 static void handle_request(Client *clients, Client *sender, Request *req, int actual);
-static void handle_login(Client *sender, Request *req);
+static void handle_login(Client* clients, int actual, Client *sender, Request *req);
 static void handle_register(Client *sender, Request *req);
 
 
@@ -55,6 +61,9 @@ static void handle_message(Client *clients, Client *sender, Message msg, int act
 static void send_public_message(Client *clients, Response *res, int actual);
 static void send_private_message(Client *clients, Response *res, int actual);
 static void send_group_message(Client *clients, Response *res, int actual);
+
+static Client* getClient(char * username);
+static int saveClient(Client cl);
 
 
 #endif /* guard */

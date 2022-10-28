@@ -5,8 +5,6 @@
 
 #include "server.h"
 
-Client mockClients[10];
-int mockClientsCount = 0;
 
 static void init(void)
 {
@@ -40,11 +38,6 @@ static void app(void)
    Client clients[MAX_CLIENTS];
 
    fd_set rdfs;
-
-   // Mock database
-   strncpy(mockClients[0].name, "John", 4);
-   strncpy(mockClients[0].password, "1234", 4);
-   mockClientsCount++;
 
    while(1)
    {
@@ -143,12 +136,51 @@ static void remove_client(Client *clients, int to_remove, int *actual)
    (*actual)--;
 }
 
+static Client* getClient(char * username){
+   Client *cl = (Client *) malloc(sizeof(Client));
+   int found =0;
+   FILE * file;
+   file = fopen("login.dat","rb");
+   if(file != NULL){
+      while(fread(cl, sizeof(Client), 1, file)){
+         if(!strcmp(cl->name,username)){
+            found = 1;
+            break;
+         }
+      }
+      fclose(file);
+   } 
+   
+   if(found ==0){
+      cl = NULL;
+   }
+   return cl;
+}
+
+// 0 client saved successfully, 
+// 1 client exists already
+// 2 error
+static int saveClient(Client cl){
+   Client * clTemp = getClient(cl.name);
+   if(clTemp == NULL){
+      FILE* file;
+      file = fopen("login.dat", "ab+");
+      if(file == NULL) return 2;
+      fwrite(&cl, sizeof(Client), 1, file);
+      fclose(file);
+      return 0;
+   }else{
+      return 1;
+   }
+   
+}
+
 static void handle_request(Client *clients, Client *sender, Request *req, int actual)
 {
    switch(req->type)
    {
       case USER_LOGIN:
-         handle_login(sender, req);
+         handle_login(clients, actual, sender, req);
          break;
       case USER_REGISTER:
          handle_register(sender, req);
@@ -173,33 +205,44 @@ static void handle_request(Client *clients, Client *sender, Request *req, int ac
    }
 }
 
-static void handle_login(Client *client, Request *req)
+static void handle_login(Client *clients,int actual, Client *client, Request *req)
 {
    char name[BUF_SIZE];
    char password[BUF_SIZE];
    strncpy(name, req->params[0], BUF_SIZE - 1);
    strncpy(password, req->params[1], BUF_SIZE - 1);
-
    Response res;
-   int i = 0;
-   for (i=0; i<mockClientsCount; i++)
-   {
-      if (strcmp(mockClients[i].name, name) == 0 
-         && strcmp(mockClients[i].password, password) == 0)
-      {
+   int i=0;
+   for(int i=0; i<actual; i++){
+      if(!strcmp(clients[i].name,name)){
+         res.type = ERROR;
+         res.paramCount = 1;
+         strncpy(res.params[0], "Login failed", 12);
+         write_client(client->sock, &res);
+         return;
+      }
+   }
+   
+   Client *clTemp = getClient(name);
+   if(clTemp != NULL){
+      if(!strcmp(clTemp->password, password)){
          res.type = OK;
          res.paramCount = 1;
          strncpy(res.params[0], "Login successful", 16);
          strcpy(client->name, name);
-         strcpy(client->password, password);
          client->logged = 1;
-         write_client(client->sock, &res);
-         return;
-      } 
+      }else{
+         res.type = ERROR;
+         res.paramCount = 1;
+         strncpy(res.params[0], "Login failed", 12);
+      }
+   }else{
+      res.type = ERROR;
+      res.paramCount = 1;
+      strncpy(res.params[0], "Login failed", 12);
    }
-   res.type = ERROR;
-   res.paramCount = 1;
-   strncpy(res.params[0], "Login failed", 12);
+
+   
    write_client(client->sock, &res);
 }
 
@@ -211,27 +254,23 @@ static void handle_register(Client *client, Request *req)
    strncpy(password, req->params[1], BUF_SIZE - 1);
 
    Response res;
-   int i = 0;
-   for (i=0; i<mockClientsCount; i++)
-   {
-      if (strcmp(mockClients[i].name, name) == 0)
-      {
-         res.type = ERROR;
-         res.paramCount = 1;
-         strncpy(res.params[0], "Username already exists", 23);
-         write_client(client->sock, &res);
-         return;
-      }
+
+   Client * clTemp = getClient(name);
+   if(clTemp == NULL){
+      strcpy(client->name, name);
+      strcpy(client->password, password);
+      client->logged = 1;
+
+      saveClient(*client);
+      strcpy(client->password, "");
+      res.type = OK;
+      res.paramCount = 1;
+      strncpy(res.params[0], "Register successful", 19);
+   }else{
+      res.type = ERROR;
+      res.paramCount = 1;
+      strncpy(res.params[0], "Username already exists", 23);
    }
-   strcpy(client->name, name);
-   strcpy(client->password, password);
-   client->logged = 1;
-   strncpy(mockClients[mockClientsCount].name, name, BUF_SIZE);
-   strncpy(mockClients[mockClientsCount].password, password, BUF_SIZE);
-   mockClientsCount++;
-   res.type = OK;
-   res.paramCount = 1;
-   strncpy(res.params[0], "Register successful", 19);
    write_client(client->sock, &res);
 }
 
