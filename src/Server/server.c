@@ -86,6 +86,7 @@ static void app(void)
          FD_SET(csock, &rdfs);
 
          Client c = { csock };
+         // strncpy(c.name, buffer, BUF_SIZE - 1);
          clients[actual] = c;
          actual++;
       }
@@ -97,7 +98,7 @@ static void app(void)
             /* a client is talking */
             if(FD_ISSET(clients[i].sock, &rdfs))
             {
-               Client *client = &clients[i];
+               Client* client = &(clients[i]);
                int c = read_client(clients[i].sock, &request);
                /* client disconnected */
                if(c == 0)
@@ -217,7 +218,7 @@ static void handle_login(Client *clients,int actual, Client *client, Request *re
       if(!strcmp(clients[i].name,name)){
          res.type = ERROR;
          res.paramCount = 1;
-         strncpy(res.params[0], "Login failed", 12);
+         strcpy(res.params[0], "Login failed");
          write_client(client->sock, &res);
          return;
       }
@@ -228,18 +229,18 @@ static void handle_login(Client *clients,int actual, Client *client, Request *re
       if(!strcmp(clTemp->password, password)){
          res.type = OK;
          res.paramCount = 1;
-         strncpy(res.params[0], "Login successful", 16);
+         strcpy(res.params[0], "Login successful");
          strcpy(client->name, name);
          client->logged = 1;
       }else{
          res.type = ERROR;
          res.paramCount = 1;
-         strncpy(res.params[0], "Login failed", 12);
+         strcpy(res.params[0], "Login failed, incorrect password");
       }
    }else{
       res.type = ERROR;
       res.paramCount = 1;
-      strncpy(res.params[0], "Login failed", 12);
+      strcpy(res.params[0], "Login failed, username doesn't exist");
    }
 
    
@@ -265,11 +266,11 @@ static void handle_register(Client *client, Request *req)
       strcpy(client->password, "");
       res.type = OK;
       res.paramCount = 1;
-      strncpy(res.params[0], "Register successful", 19);
+      strcpy(res.params[0], "Register successful");
    }else{
       res.type = ERROR;
       res.paramCount = 1;
-      strncpy(res.params[0], "Username already exists", 23);
+      strcpy(res.params[0], "Username already exists");
    }
    write_client(client->sock, &res);
 }
@@ -279,10 +280,10 @@ static void handle_message(Client *clients, Client *sender, Message msg, int act
    Response res;
    res.type = MESSAGE;
    res.paramCount = 0;
+   strcpy(res.message.content, msg.content);
+   strcpy(res.message.receiver, msg.receiver);
+   strcpy(res.message.sender, sender->name);
    res.message.type = msg.type;
-   strncpy(res.message.content, msg.content, BUF_SIZE);
-   strncpy(res.message.receiver, msg.receiver, BUF_SIZE);
-   strncpy(res.message.sender, sender->name, BUF_SIZE);
 
    switch(msg.type)
    {
@@ -306,7 +307,7 @@ static void send_public_message(Client *clients, Response *res, int actual)
    for(i = 0; i < actual; i++)
    {
       /* we don't send message to the sender */
-      if(strcmp (clients[i].name, res->message.sender) != 0)
+      if(strcmp (clients[i].name, res->message.sender) != 0 && clients[i].logged==1 )
       {
          write_client(clients[i].sock, res);
       }
@@ -321,7 +322,7 @@ static void send_private_message(Client *clients, Response *res, int actual)
       if (strcmp (clients[i].name, res->message.receiver) == 0)
       {
          write_client (clients[i].sock, res);
-         return;
+         break;
       }
    }
 }

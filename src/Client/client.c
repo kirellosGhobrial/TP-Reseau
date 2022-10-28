@@ -57,7 +57,7 @@ static void app(const char *address)
       }
       else if(FD_ISSET(sock, &rdfs))
       {
-         strcpy(response.params[0], "");
+         //strcpy(response.params[0], "");
          handle_server_response(sock, &response);
       }
    }
