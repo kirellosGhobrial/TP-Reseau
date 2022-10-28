@@ -42,8 +42,8 @@ typedef struct
    int logged;
    int invitations[10];
    int nbInvitations;
-   int group
-}Client;
+   int group;
+} Client;
 
 static void init(void);
 static void end(void);

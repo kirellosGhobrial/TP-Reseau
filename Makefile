@@ -28,8 +28,10 @@ $(OBJ_SERVER): $(C_FILES_SERVER) | build
 build:
 	mkdir -p build
 	mkdir -p bin
+	mkdir -p db
 
 clean:
 	rm -f $(OBJS) $(EXECS)
 	rm -rf build
 	rm -rf bin
+	rm -rf db
