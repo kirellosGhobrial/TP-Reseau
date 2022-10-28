@@ -40,6 +40,9 @@ typedef struct
    char name[BUF_SIZE];
    char password[BUF_SIZE];
    int logged;
+   int invitations[10];
+   int nbInvitations;
+   int group
 }Client;
 
 static void init(void);
@@ -55,6 +58,7 @@ static void clear_clients(Client *clients, int actual);
 static void handle_request(Client *clients, Client *sender, Request *req, int actual);
 static void handle_login(Client* clients, int actual, Client *sender, Request *req);
 static void handle_register(Client *sender, Request *req);
+static void handle_create(Client *sender, Request *req);
 
 
 static void handle_message(Client *clients, Client *sender, Message msg, int actual);

@@ -147,7 +147,7 @@ static void handle_user_input(SOCKET sock, Request *req)
       char *password = strtok(NULL, "");
       if (name == NULL || password == NULL)
       {
-         printf("Usage : /login <name> <password>\n");
+         printf("Usage : /register <name> <password>\n");
       }
       else
       {
