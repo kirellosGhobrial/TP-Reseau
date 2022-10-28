@@ -93,7 +93,6 @@ static void app(void)
          FD_SET(csock, &rdfs);
 
          Client c = { csock };
-         // strncpy(c.name, buffer, BUF_SIZE - 1);
          clients[actual] = c;
          actual++;
       }
@@ -105,7 +104,7 @@ static void app(void)
             /* a client is talking */
             if(FD_ISSET(clients[i].sock, &rdfs))
             {
-               Client client = clients[i];
+               Client *client = &clients[i];
                int c = read_client(clients[i].sock, &request);
                /* client disconnected */
                if(c == 0)
@@ -115,7 +114,7 @@ static void app(void)
                }
                else
                {
-                  handle_request(clients, &client, &request, actual);
+                  handle_request(clients, client, &request, actual);
                }
                break;
             }
@@ -155,7 +154,7 @@ static void handle_request(Client *clients, Client *sender, Request *req, int ac
          handle_register(sender, req);
          break;
       case SEND_MESSAGE:
-         handle_message(clients, sender, req->msg, actual);
+         handle_message(clients, sender, req->message, actual);
          break;
       case CREATE_GROUP:
          // handle_create_group(sender, req);
@@ -236,15 +235,17 @@ static void handle_register(Client *client, Request *req)
    write_client(client->sock, &res);
 }
 
-static void handle_message(Client *clients, Client *sender, Message *msg, int actual)
+static void handle_message(Client *clients, Client *sender, Message msg, int actual)
 {
    Response res;
    res.type = MESSAGE;
    res.paramCount = 0;
-   res.msg = msg;
-   strcpy(res.msg->sender, sender->name);
+   res.message.type = msg.type;
+   strncpy(res.message.content, msg.content, BUF_SIZE);
+   strncpy(res.message.receiver, msg.receiver, BUF_SIZE);
+   strncpy(res.message.sender, sender->name, BUF_SIZE);
 
-   switch(msg->type)
+   switch(msg.type)
    {
       case PUBLIC_MESSAGE:
          send_public_message(clients, &res, actual);
@@ -266,7 +267,7 @@ static void send_public_message(Client *clients, Response *res, int actual)
    for(i = 0; i < actual; i++)
    {
       /* we don't send message to the sender */
-      if(strcmp (clients[i].name, res->msg->sender) != 0)
+      if(strcmp (clients[i].name, res->message.sender) != 0)
       {
          write_client(clients[i].sock, res);
       }
@@ -278,10 +279,10 @@ static void send_private_message(Client *clients, Response *res, int actual)
    int i = 0;
    for(i=0; i<actual; i++)
    {
-      if (strcmp (clients[i].name, res->msg->receiver) == 0)
+      if (strcmp (clients[i].name, res->message.receiver) == 0)
       {
          write_client (clients[i].sock, res);
-         break;
+         return;
       }
    }
 }

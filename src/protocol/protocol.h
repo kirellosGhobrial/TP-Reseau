@@ -37,7 +37,7 @@ typedef struct
   request_type type;
   int paramCount;
   char params[PARAM_NUMBER][BUF_SIZE];
-  Message *msg;
+  Message message;
 } Request;
 
 typedef enum
@@ -53,7 +53,7 @@ typedef struct
   response_type type;
   int paramCount;
   char params[PARAM_NUMBER][BUF_SIZE];
-  Message *msg;
+  Message message;
 } Response;
 
 #endif /* guard */

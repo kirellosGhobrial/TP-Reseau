@@ -51,7 +51,7 @@ static void handle_login(Client *sender, Request *req);
 static void handle_register(Client *sender, Request *req);
 
 
-static void handle_message(Client *clients, Client *sender, Message *msg, int actual);
+static void handle_message(Client *clients, Client *sender, Message msg, int actual);
 static void send_public_message(Client *clients, Response *res, int actual);
 static void send_private_message(Client *clients, Response *res, int actual);
 static void send_group_message(Client *clients, Response *res, int actual);

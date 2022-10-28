@@ -127,7 +127,6 @@ static void write_server(SOCKET sock, Request *req)
 static void handle_user_input(SOCKET sock, Request *req)
 {
    char buffer[BUF_SIZE];
-   Message msg;
    fgets(buffer, BUF_SIZE - 1, stdin);
    int len = strlen (buffer) - 1;
    buffer[len] = '\0';
@@ -180,20 +179,18 @@ static void handle_user_input(SOCKET sock, Request *req)
    {
       char *name = strtok(buffer + 8, " ");
       char *input_msg = strtok(NULL, "");
-      msg.type = PRIVATE_MESSAGE;
-      strcpy(msg.receiver, name);
-      strcpy(msg.content, input_msg);
+      req->message.type = PRIVATE_MESSAGE;
+      strcpy(req->message.receiver, name);
+      strcpy(req->message.content, input_msg);
       req->type = SEND_MESSAGE;
-      req->msg = &msg;
       write_server(sock, req);
    }
    else if (strncmp(buffer, "/public", 7) == 0)
    {
       char *input_msg = strtok(buffer + 7, "");
-      msg.type = PUBLIC_MESSAGE;
-      strcpy(msg.content, input_msg);
+      req->message.type = PUBLIC_MESSAGE;
+      strcpy(req->message.content, input_msg);
       req->type = SEND_MESSAGE;
-      req->msg = &msg;
       write_server(sock, req);
    }
    else
@@ -219,7 +216,7 @@ static void handle_server_response(SOCKET sock, Response *res)
       printf(GRN "%s" RESET "\n", res->params[0]);
       break;
    case MESSAGE:
-      printf("Message received : %s\n", res->msg->content);
+      printf("Message received from %s : %s\n", res->message.sender, res->message.content);
       break;
    case ERROR:
       printf(RED "Error : %s" RESET "\n", res->params[0]);
