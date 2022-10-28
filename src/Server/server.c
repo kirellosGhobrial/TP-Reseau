@@ -141,7 +141,7 @@ static Client* getClient(char * username){
    Client *cl = (Client *) malloc(sizeof(Client));
    int found =0;
    FILE * file;
-   file = fopen("login.dat","rb");
+   file = fopen("db/login.dat","rb");
    if(file != NULL){
       while(fread(cl, sizeof(Client), 1, file)){
          if(!strcmp(cl->name,username)){
@@ -165,7 +165,7 @@ static int saveClient(Client cl){
    Client * clTemp = getClient(cl.name);
    if(clTemp == NULL){
       FILE* file;
-      file = fopen("login.dat", "ab+");
+      file = fopen("db/login.dat", "ab+");
       if(file == NULL) return 2;
       fwrite(&cl, sizeof(Client), 1, file);
       fclose(file);
