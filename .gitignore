@@ -1,2 +1,4 @@
-Client/client
-Serveur/server
+build/
+bin/
+db/
+.vscode/
