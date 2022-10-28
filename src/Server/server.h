@@ -42,7 +42,6 @@ typedef struct
    int logged;
    int invitations[10];
    int nbInvitations;
-   int group
 }Client;
 
 static void init(void);
@@ -52,22 +51,24 @@ static int init_connection(void);
 static void end_connection(int sock);
 static int read_client(SOCKET sock, Request *req);
 static void write_client(SOCKET sock, Response *res);
-static void remove_client(Client *clients, int to_remove, int *actual);
-static void clear_clients(Client *clients, int actual);
+static void remove_client( int to_remove);
+static void clear_clients();
 
-static void handle_request(Client *clients, Client *sender, Request *req, int actual);
-static void handle_login(Client* clients, int actual, Client *sender, Request *req);
+static void handle_request(Client *sender, Request *req);
+static void handle_login( Client *sender, Request *req);
 static void handle_register(Client *sender, Request *req);
 static void handle_create(Client *sender, Request *req);
 
 
-static void handle_message(Client *clients, Client *sender, Message msg, int actual);
-static void send_public_message(Client *clients, Response *res, int actual);
-static void send_private_message(Client *clients, Response *res, int actual);
-static void send_group_message(Client *clients, Response *res, int actual);
+static void handle_message( Client *sender, Message msg);
+static void send_public_message( Response *res);
+static void send_private_message( Response *res);
+static void send_group_message( Response *res);
 
 static Client* getClient(char * username);
 static int saveClient(Client cl);
+static void addUnreadMessage(char* username, Message msg);
+static void readUnreadMessages(char* username, int nbMsg);
 
 
 #endif /* guard */
