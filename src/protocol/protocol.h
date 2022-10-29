@@ -25,7 +25,7 @@ typedef struct
   char sender[BUF_SIZE];
   char receiver[BUF_SIZE];
   char content[BUF_SIZE];
-  int groupID;
+  char groupID[BUF_SIZE];
 } Message;
 
 typedef enum
