@@ -193,6 +193,39 @@ static void handle_user_input(SOCKET sock, Request *req)
       req->type = SEND_MESSAGE;
       write_server(sock, req);
    }
+   else if (strncmp(buffer, "/create", 7) == 0)
+   {
+      char *name = strtok(buffer + 7, " ");
+      req->type = CREATE_GROUP;
+      req->paramCount = 1;
+      strcpy(req->params[0], name);
+      write_server(sock, req);
+   }
+   else if (strncmp(buffer, "/invite", 7) == 0)
+   {
+      char *group_name = strtok(buffer + 7, " ");
+      char *user_name = strtok(NULL, "");
+      if (group_name == NULL || user_name == NULL)
+      {
+         printf("Usage : /invite <group_name> <user_name>\n");
+      }
+      else
+      {
+         req->type = INVITE_USER;
+         req->paramCount = 2;
+         strcpy(req->params[0], group_name);
+         strcpy(req->params[1], user_name);
+         write_server(sock, req);
+      }
+   }
+   else if (strncmp(buffer, "/join", 5) == 0)
+   {
+      char *name = strtok(buffer + 5, " ");
+      req->type = JOIN_GROUP;
+      req->paramCount = 1;
+      strcpy(req->params[0], name);
+      write_server(sock, req);
+   }
    else
    {
       printf(RED "Unknown command : %s" RESET "\n", buffer);

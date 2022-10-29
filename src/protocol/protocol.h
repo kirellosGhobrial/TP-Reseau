@@ -6,11 +6,10 @@
 
 typedef struct
 {
-  int groupID;
-  char groupName[BUF_SIZE];
-  char owner[BUF_SIZE];
-  char *members[BUF_SIZE];
-} Groupe;
+  char name[20];
+  int memberCount;
+  char *members[20];
+} Group;
 
 typedef enum
 {
@@ -22,8 +21,8 @@ typedef enum
 typedef struct
 {
   message_type type;
-  char sender[BUF_SIZE];
-  char receiver[BUF_SIZE];
+  char sender[20];
+  char receiver[20];
   char content[BUF_SIZE];
   int groupID;
 } Message;

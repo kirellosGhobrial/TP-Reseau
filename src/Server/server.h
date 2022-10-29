@@ -37,11 +37,11 @@ typedef struct in_addr IN_ADDR;
 typedef struct
 {
    SOCKET sock;
-   char name[BUF_SIZE];
-   char password[BUF_SIZE];
+   char name[20];
+   char password[20];
    int logged;
-   int invitations[10];
-   int nbInvitations;
+   char *invitations[10]; // Name of the group invited to
+   int invitationCount;
    int group;
 } Client;
 
@@ -58,8 +58,10 @@ static void clear_clients(Client *clients, int actual);
 static void handle_request(Client *clients, Client *sender, Request *req, int actual);
 static void handle_login(Client* clients, int actual, Client *sender, Request *req);
 static void handle_register(Client *sender, Request *req);
-static void handle_create(Client *sender, Request *req);
 
+static void handle_create_group(Client *sender, Request *req);
+static void handle_join_group(Client *client, Request *req);
+static void handle_invite_user(Client *clients, Client *sender, Request *req, int actual);
 
 static void handle_message(Client *clients, Client *sender, Message msg, int actual);
 static void send_public_message(Client *clients, Response *res, int actual);
@@ -67,7 +69,10 @@ static void send_private_message(Client *clients, Response *res, int actual);
 static void send_group_message(Client *clients, Response *res, int actual);
 
 static Client* getClient(char * username);
-static int saveClient(Client cl);
+static void saveClient(Client cl);
+
+static Group* getGroup(char * groupName);
+static void saveGroup(Group group);
 
 
 #endif /* guard */
