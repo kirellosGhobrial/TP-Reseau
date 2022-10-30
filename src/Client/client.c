@@ -272,8 +272,10 @@ static void handle_server_response(SOCKET sock, Response *res)
    case OK:
       printf(GRN "%s" RESET "\n", res->params[0]);
       break;
-   case MESSAGE:
-      printf("Message received from %s : %s\n", res->message.sender, res->message.content);
+   case MESSAGE: 
+      if (res->message.type == PUBLIC_MESSAGE) printf( "[%s on public]: %s\n", res->message.sender, res->message.content);
+      else if(res->message.type == PRIVATE_MESSAGE) printf("[%s on private]: %s\n", res->message.sender, res->message.content);
+      else if(res->message.type == GROUP_MESSAGE) printf("[%s on %s]: %s\n", res->message.sender, res->message.groupID, res->message.content);
       break;
    case ERROR:
       printf(RED "Error : %s" RESET "\n", res->params[0]);

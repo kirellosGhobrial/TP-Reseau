@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include "server.h"
+Client clients[MAX_CLIENTS];
+int actual = 0;
 Group groups[100];
 int groupCount = 0;
 
@@ -33,10 +35,8 @@ static void app(void)
    char buffer[BUF_SIZE];
    Request request;
    /* the index for the array */
-   int actual = 0;
    int max = sock;
    /* an array for all clients */
-   Client clients[MAX_CLIENTS];
 
    fd_set rdfs;
 
@@ -105,11 +105,11 @@ static void app(void)
                if(c == 0)
                {
                   closesocket(clients[i].sock);
-                  remove_client(clients, i, &actual);
+                  remove_client( i);
                }
                else
                {
-                  handle_request(clients, client, &request, actual);
+                  handle_request(client, &request);
                }
                break;
             }
@@ -117,11 +117,11 @@ static void app(void)
       }
    }
 
-   clear_clients(clients, actual);
+   clear_clients();
    end_connection(sock);
 }
 
-static void clear_clients(Client *clients, int actual)
+static void clear_clients()
 {
    int i = 0;
    for(i = 0; i < actual; i++)
@@ -130,12 +130,12 @@ static void clear_clients(Client *clients, int actual)
    }
 }
 
-static void remove_client(Client *clients, int to_remove, int *actual)
+static void remove_client(int to_remove)
 {
    /* we remove the client in the array */
-   memmove(clients + to_remove, clients + to_remove + 1, (*actual - to_remove - 1) * sizeof(Client));
+   memmove(clients + to_remove, clients + to_remove + 1, (actual - to_remove - 1) * sizeof(Client));
    /* number client - 1 */
-   (*actual)--;
+   actual--;
 }
 
 static Client* getClient(char * username){
@@ -156,6 +156,7 @@ static Client* getClient(char * username){
    if(found ==0){
       cl = NULL;
    }
+
    return cl;
 }
 
@@ -229,18 +230,18 @@ static void saveGroup(Group group){
    }
 }
 
-static void handle_request(Client *clients, Client *sender, Request *req, int actual)
+static void handle_request(Client *sender, Request *req)
 {
    switch(req->type)
    {
       case USER_LOGIN:
-         handle_login(clients, actual, sender, req);
+         handle_login( sender, req);
          break;
       case USER_REGISTER:
          handle_register(sender, req);
          break;
       case SEND_MESSAGE:
-         handle_message(clients, sender, req->message, actual);
+         handle_message( sender, req->message);
          break;
       case CREATE_GROUP:
          handle_create_group(sender, req);
@@ -259,7 +260,7 @@ static void handle_request(Client *clients, Client *sender, Request *req, int ac
    }
 }
 
-static void handle_login(Client *clients,int actual, Client *client, Request *req)
+static void handle_login(Client *client, Request *req)
 {
    char name[BUF_SIZE];
    char password[BUF_SIZE];
@@ -299,6 +300,8 @@ static void handle_login(Client *clients,int actual, Client *client, Request *re
 
    
    write_client(client->sock, &res);
+   if(res.type == OK)  readUnreadMessages(client->name,10);
+
 }
 
 static void handle_register(Client *client, Request *req)
@@ -484,7 +487,7 @@ static void handle_join_group(Client *sender, Request *req)
    return;
 }
 
-static void handle_message(Client *clients, Client *sender, Message msg, int actual)
+static void handle_message(Client *sender, Message msg)
 {
    Response res;
    res.type = MESSAGE;
@@ -497,20 +500,20 @@ static void handle_message(Client *clients, Client *sender, Message msg, int act
    switch(msg.type)
    {
       case PUBLIC_MESSAGE:
-         send_public_message(clients, &res, actual);
+         send_public_message( &res);
          break;
       case PRIVATE_MESSAGE:
-         send_private_message(clients, sender, &res, actual);
+         send_private_message( &res);
          break;
       case GROUP_MESSAGE:
-         send_group_message(clients, sender, &res, actual);
+         send_group_message( &res);
          break;
       default:
          break;
    }
 }
 
-static void send_public_message(Client *clients, Response *res, int actual)
+static void send_public_message(Response *res)
 {
    int i = 0;
    for(i = 0; i < actual; i++)
@@ -523,7 +526,7 @@ static void send_public_message(Client *clients, Response *res, int actual)
    }
 }
 
-static void send_private_message(Client *clients, Client *sender, Response *res, int actual)
+static void send_private_message(Client *sender, Response *res)
 {
    Client *client = getClient(res->message.receiver);
    if (client == NULL)
@@ -540,10 +543,12 @@ static void send_private_message(Client *clients, Client *sender, Response *res,
       if (strcmp (clients[i].name, res->message.receiver) == 0)
       {
          write_client (clients[i].sock, res);
-         break;
+         return;
       }
    }
-}
+   if(getClient(res->message.receiver)){
+      addUnreadMessage(res->message.receiver, res->message);
+   }
 
 static void send_group_message(Client *clients, Client *sender, Response *res, int actual)
 {
@@ -587,6 +592,38 @@ static void send_group_message(Client *clients, Client *sender, Response *res, i
    }
 }
 
+static void addUnreadMessage(char* username, Message msg){
+   if(getClient(username)){
+      FILE * file;
+      char dest[BUF_SIZE];
+      strcpy(dest,"db/users/");
+      strcat(dest,username);
+      file = fopen(dest,"ab+");
+      fwrite(&msg,sizeof(Message),1,file);
+      fclose(file);
+   }
+}
+
+static void readUnreadMessages(char* username, int nbMsg){
+   Client * clSender;
+   Client* clTemp = getClient(username);
+   if(clTemp != NULL){
+      FILE * file;
+      char dest[BUF_SIZE];
+      strcpy(dest,"db/users/");
+      strcat(dest,username);
+      file = fopen(dest,"ab+");
+      Message msg;
+      while(fread(&msg,sizeof(Message),1,file) && nbMsg>0){
+         clSender = getClient(msg.sender);
+         if(clSender != NULL)  handle_message(clSender,msg);
+         nbMsg--;
+      }
+      freopen(dest,"w", file);
+      fclose(file);
+   }
+}
+
 static int init_connection(void)
 {
    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -596,6 +633,12 @@ static int init_connection(void)
    {
       perror("socket()");
       exit(errno);
+   }
+
+   int opt =1;
+   if(setsockopt(sock,SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))){
+      perror("setsockopt");
+      exit(EXIT_FAILURE);
    }
 
    sin.sin_addr.s_addr = htonl(INADDR_ANY);

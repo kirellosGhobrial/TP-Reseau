@@ -37,6 +37,7 @@ typedef struct in_addr IN_ADDR;
 #define GRN  "\x1B[32m"
 #define YEL  "\x1B[33m"
 #define BLU  "\x1B[34m"
+#define BOLD "\033[1m"
 #define RESET "\033[0m"
 
 static void init(void);
