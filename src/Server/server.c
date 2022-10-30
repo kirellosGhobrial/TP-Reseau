@@ -678,6 +678,7 @@ static void readUnreadNotifications(char* username){
             if (!strcmp(clients[i].name, cl->name))
             {
                write_client(clients[i].sock, &res);
+               break;
             }
          } 
       }
