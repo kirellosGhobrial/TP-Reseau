@@ -310,7 +310,10 @@ static void handle_login(Client *client, Request *req)
 
    
    write_client(client->sock, &res);
-   if(res.type == OK)  readUnreadMessages(client->name,10);
+   if(res.type == OK){
+      readUnreadMessages(client->name);
+      readUnreadNotifications(client->name);
+   }
 
 }
 
@@ -431,20 +434,24 @@ static void handle_invite_user(Client *sender, Request *req)
             strcpy(res.params[0], "User invited successfully");
             write_client(sender->sock, &res);
 
-            // Send invitation to the user if he is online
+
+            // Send invitation to the user 
+            res.type = OK;
+            res.paramCount = 1;
+            char message[BUF_SIZE];
+            sprintf(message, "You have been invited to group %s by %s", groupName, sender->name);
+            strcpy(res.params[0], message);
+            //if he is online
             for (int i = 0; i < actual; i++)
             {
                if (!strcmp(clients[i].name, client->name))
                {
-                  res.type = OK;
-                  res.paramCount = 1;
-                  char message[BUF_SIZE];
-                  sprintf(message, "You have been invited to group %s by %s", groupName, sender->name);
-                  strcpy(res.params[0], message);
                   write_client(clients[i].sock, &res);
                   return;
                }
-            }   
+            }
+            //if he is not
+            addUnreadNotification(client->name,res);
             return;         
          }
       }
@@ -601,12 +608,12 @@ static void send_group_message(Client *sender, Response *res)
    }
    for (i = 0; i < group->memberCount; i++)
    {
-      printf("Member: %s", group->members[i]);
+      //printf("Member: %s", group->members[i]);
       for (int j = 0; j < actual; j++)
       {
          if (!strcmp(clients[j].name, group->members[i]))
          {
-            printf("Sending message to %s\n", clients[j].name);
+            //printf("Sending message to %s\n", clients[j].name);
             write_client(clients[j].sock, res);
          }
       }
@@ -617,7 +624,7 @@ static void addUnreadMessage(char* username, Message msg){
    if(getClient(username)){
       FILE * file;
       char dest[BUF_SIZE];
-      strcpy(dest,"db/users/");
+      strcpy(dest,"db/unreadMessages/");
       strcat(dest,username);
       file = fopen(dest,"ab+");
       fwrite(&msg,sizeof(Message),1,file);
@@ -625,20 +632,55 @@ static void addUnreadMessage(char* username, Message msg){
    }
 }
 
-static void readUnreadMessages(char* username, int nbMsg){
+static void readUnreadMessages(char* username){
    Client * clSender;
    Client* clTemp = getClient(username);
    if(clTemp != NULL){
       FILE * file;
       char dest[BUF_SIZE];
-      strcpy(dest,"db/users/");
+      strcpy(dest,"db/unreadMessages/");
       strcat(dest,username);
       file = fopen(dest,"ab+");
       Message msg;
-      while(fread(&msg,sizeof(Message),1,file) && nbMsg>0){
+      while(fread(&msg,sizeof(Message),1,file)){
          clSender = getClient(msg.sender);
          if(clSender != NULL)  handle_message(clSender,msg);
-         nbMsg--;
+      }
+      freopen(dest,"w", file);
+      fclose(file);
+   }
+}
+
+static void addUnreadNotification(char* username, Response res){
+   if(getClient(username)){
+      FILE * file;
+      char dest[BUF_SIZE];
+      strcpy(dest,"db/unreadNotifications/");
+      strcat(dest,username);
+      file = fopen(dest,"ab+");
+      fwrite(&res,sizeof(Response),1,file);
+      fclose(file);
+   }
+}
+
+static void readUnreadNotifications(char* username){
+   Client* cl = getClient(username);
+   if(cl != NULL){
+      FILE * file;
+      char dest[BUF_SIZE];
+      strcpy(dest,"db/unreadNotifications/");
+      strcat(dest,username);
+      file = fopen(dest,"ab+");
+      Response res;
+      while(fread(&res,sizeof(Response),1,file)){
+         for (int i = 0; i < actual; i++)
+         {
+            if (!strcmp(clients[i].name, cl->name))
+            {
+               write_client(clients[i].sock, &res);
+               return;
+            }
+         } 
       }
       freopen(dest,"w", file);
       fclose(file);

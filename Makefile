@@ -29,7 +29,8 @@ build:
 	mkdir -p build
 	mkdir -p bin
 	mkdir -p db
-	mkdir -p db/users
+	mkdir -p db/unreadMessages
+	mkdir -p db/unreadNotifications
 clean:
 	rm -f $(OBJS) $(EXECS)
 	rm -rf build
