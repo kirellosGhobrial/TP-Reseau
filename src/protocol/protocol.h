@@ -3,14 +3,15 @@
 
 #define BUF_SIZE    1024
 #define PARAM_NUMBER 10
+#define NAME_SIZE   32
+#define MAX_MEMBERS 50
 
 typedef struct
 {
-  int groupID;
-  char groupName[BUF_SIZE];
-  char owner[BUF_SIZE];
-  char *members[BUF_SIZE];
-} Groupe;
+  char name[NAME_SIZE];
+  int memberCount;
+  char members[MAX_MEMBERS][NAME_SIZE];
+} Group;
 
 typedef enum
 {
@@ -22,10 +23,10 @@ typedef enum
 typedef struct
 {
   message_type type;
-  char sender[BUF_SIZE];
-  char receiver[BUF_SIZE];
+  char sender[20];
+  char receiver[20];
   char content[BUF_SIZE];
-  int groupID;
+  int group;
 } Message;
 
 typedef enum

@@ -4,7 +4,8 @@
 #include <string.h>
 
 #include "server.h"
-
+Group groups[100];
+int groupCount = 0;
 
 static void init(void)
 {
@@ -158,22 +159,74 @@ static Client* getClient(char * username){
    return cl;
 }
 
-// 0 client saved successfully, 
-// 1 client exists already
-// 2 error
-static int saveClient(Client cl){
+static void saveClient(Client cl){
    Client * clTemp = getClient(cl.name);
    if(clTemp == NULL){
       FILE* file;
       file = fopen("db/login.dat", "ab+");
-      if(file == NULL) return 2;
       fwrite(&cl, sizeof(Client), 1, file);
       fclose(file);
-      return 0;
    }else{
-      return 1;
+      /* Update client if already exist */
+      FILE * file;
+      file = fopen("db/login.dat","rb+");
+      if(file != NULL){
+         while(fread(clTemp, sizeof(Client), 1, file)){
+            if(!strcmp(clTemp->name,cl.name)){
+               fseek(file, -sizeof(Client), SEEK_CUR);
+               fwrite(&cl, sizeof(Client), 1, file);
+               break;
+            }
+         }
+         fclose(file);
+      }
    }
    
+}
+
+static Group* getGroup(char * groupName){
+   Group *group = (Group *) malloc(sizeof(Group));
+   int found =0;
+   FILE * file;
+   file = fopen("db/groups.dat","rb");
+   if(file != NULL){
+      while(fread(group, sizeof(Group), 1, file)){
+         if(!strcmp(group->name,groupName)){
+            found = 1;
+            break;
+         }
+      }
+      fclose(file);
+   } 
+   
+   if(found ==0){
+      group = NULL;
+   }
+   return group;
+}
+
+static void saveGroup(Group group){
+   Group * groupTemp = getGroup(group.name);
+   if(groupTemp == NULL){
+      FILE* file;
+      file = fopen("db/groups.dat", "ab+");
+      fwrite(&group, sizeof(Group), 1, file);
+      fclose(file);
+   }else{
+      /* Update group if already exist*/
+      FILE * file;
+      file = fopen("db/groups.dat","rb+");
+      if(file != NULL){
+         while(fread(groupTemp, sizeof(Group), 1, file)){
+            if(!strcmp(groupTemp->name,group.name)){
+               fseek(file, -sizeof(Group), SEEK_CUR);
+               fwrite(&group, sizeof(Group), 1, file);
+               break;
+            }
+         }
+         fclose(file);
+      }
+   }
 }
 
 static void handle_request(Client *clients, Client *sender, Request *req, int actual)
@@ -190,13 +243,13 @@ static void handle_request(Client *clients, Client *sender, Request *req, int ac
          handle_message(clients, sender, req->message, actual);
          break;
       case CREATE_GROUP:
-         // handle_create_group(sender, req);
+         handle_create_group(sender, req);
          break;
       case JOIN_GROUP:
-         // handle_join_group(sender, req);
+         handle_join_group(sender, req);
          break;
       case INVITE_USER:
-         // handle_invite_user(sender, req);
+         handle_invite_user(clients, sender, req, actual);
          break;
       case LIST_USERS:
          // handle_list_users(sender);
@@ -215,6 +268,7 @@ static void handle_login(Client *clients,int actual, Client *client, Request *re
    Response res;
    int i=0;
    for(int i=0; i<actual; i++){
+      /* Check if user is already logged in */
       if(!strcmp(clients[i].name,name)){
          res.type = ERROR;
          res.paramCount = 1;
@@ -260,6 +314,7 @@ static void handle_register(Client *client, Request *req)
    if(clTemp == NULL){
       strcpy(client->name, name);
       strcpy(client->password, password);
+      client->invitationCount = 0;
       client->logged = 1;
 
       saveClient(*client);
@@ -273,6 +328,160 @@ static void handle_register(Client *client, Request *req)
       strcpy(res.params[0], "Username already exists");
    }
    write_client(client->sock, &res);
+}
+
+static void handle_create_group(Client *client, Request *req)
+{
+   char groupName[BUF_SIZE];
+   strncpy(groupName, req->params[0], BUF_SIZE - 1);
+   Response res;
+   Group *group = getGroup(groupName);
+   if (group == NULL)
+   {
+      group = (Group *)malloc(sizeof(Group));
+      strcpy(group->name, groupName);
+      strcpy(group->members[0], client->name);
+      group->memberCount = 1;
+      saveGroup(*group);
+      res.type = OK;
+      strcpy(res.params[0], "Group created successfully");
+   }
+   else
+   {
+      res.type = ERROR;
+      strcpy(res.params[0], "Group already exists");
+   }
+   res.paramCount = 1;
+   write_client(client->sock, &res);
+}
+
+static void handle_invite_user(Client *clients, Client *sender, Request *req, int actual)
+{
+   char groupName[20];
+   char username[20];
+   strncpy(groupName, req->params[0], 20);
+   strncpy(username, req->params[1], 20);
+   Response res;
+   Group *group = getGroup(groupName);
+   if (group == NULL)
+   {
+      res.type = ERROR;
+      res.paramCount = 1;
+      strcpy(res.params[0], "Group doesn't exist");
+      write_client(sender->sock, &res);
+      return;
+   }
+
+   for (int j = 0; j < group->memberCount; j++)
+   {
+      if (!strcmp(group->members[j], sender->name))
+      {
+         // Check if user exists in db
+         Client *client = getClient(username);
+         if (client == NULL)
+         {
+            res.type = ERROR;
+            res.paramCount = 1;
+            strcpy(res.params[0], "User doesn't exist");
+            write_client(sender->sock, &res);
+            return;
+         }
+         else
+         {
+            // Check if the user is already in the group
+            for (int k = 0; k < group->memberCount; k++)
+            {
+               if (!strcmp(group->members[k], client->name))
+               {
+                  res.type = ERROR;
+                  res.paramCount = 1;
+                  strcpy(res.params[0], "User already in group");
+                  write_client(sender->sock, &res);
+                  return;
+               }
+            }
+            strcpy(client->invitations[client->invitationCount], group->name);
+            client->invitationCount++;
+            saveClient(*client);
+            res.type = OK;
+            res.paramCount = 1;
+            strcpy(res.params[0], "User invited successfully");
+            write_client(sender->sock, &res);
+
+            // Send invitation to the user if he is online
+            for (int i = 0; i < actual; i++)
+            {
+               if (!strcmp(clients[i].name, client->name))
+               {
+                  res.type = OK;
+                  res.paramCount = 1;
+                  char message[BUF_SIZE];
+                  sprintf(message, "You have been invited to group %s by %s", groupName, sender->name);
+                  strcpy(res.params[0], message);
+                  write_client(clients[i].sock, &res);
+                  return;
+               }
+            }   
+            return;         
+         }
+      }
+   }
+   res.type = ERROR;
+   res.paramCount = 1;
+   strcpy(res.params[0], "You are not a member of this group");
+   write_client(sender->sock, &res);
+   return;
+}
+
+static void handle_join_group(Client *sender, Request *req)
+{
+   char groupName[BUF_SIZE];
+   strncpy(groupName, req->params[0], BUF_SIZE - 1);
+   Response res;
+   Group *group = getGroup(groupName);
+   if (group == NULL)
+   {
+      res.type = ERROR;
+      res.paramCount = 1;
+      strcpy(res.params[0], "Group doesn't exist");
+      write_client(sender->sock, &res);
+      return;
+   }
+   for (int i = 0; i < group->memberCount; i++)
+   {
+      if (!strcmp(group->members[i], sender->name))
+      {
+         res.type = ERROR;
+         res.paramCount = 1;
+         strcpy(res.params[0], "You are already a member of this group");
+         write_client(sender->sock, &res);
+         return;
+      }
+   }
+   Client *client = getClient(sender->name);
+   int i = 0;
+   for (i = 0; i < client->invitationCount; i++)
+   {
+      if (!strcmp(client->invitations[i], groupName))
+      {
+         strcpy(group->members[group->memberCount], client->name);
+         group->memberCount++;
+         saveGroup(*group);
+         strcpy(client->invitations[i], client->invitations[client->invitationCount - 1]);
+         client->invitationCount--;
+         saveClient(*client);
+         res.type = OK;
+         res.paramCount = 1;
+         strcpy(res.params[0], "You have joined the group successfully");
+         write_client(sender->sock, &res);
+         return;
+      }
+   }
+   res.type = ERROR;
+   res.paramCount = 1;
+   strcpy(res.params[0], "You have not been invited to this group");
+   write_client(sender->sock, &res);
+   return;
 }
 
 static void handle_message(Client *clients, Client *sender, Message msg, int actual)
@@ -291,10 +500,10 @@ static void handle_message(Client *clients, Client *sender, Message msg, int act
          send_public_message(clients, &res, actual);
          break;
       case PRIVATE_MESSAGE:
-         send_private_message(clients, &res, actual);
+         send_private_message(clients, sender, &res, actual);
          break;
       case GROUP_MESSAGE:
-         send_group_message(clients, &res, actual);
+         send_group_message(clients, sender, &res, actual);
          break;
       default:
          break;
@@ -314,8 +523,17 @@ static void send_public_message(Client *clients, Response *res, int actual)
    }
 }
 
-static void send_private_message(Client *clients, Response *res, int actual)
+static void send_private_message(Client *clients, Client *sender, Response *res, int actual)
 {
+   Client *client = getClient(res->message.receiver);
+   if (client == NULL)
+   {
+      res->type = ERROR;
+      res->paramCount = 1;
+      strcpy(res->params[0], "User doesn't exist");
+      write_client(sender->sock, res);
+      return;
+   }
    int i = 0;
    for(i=0; i<actual; i++)
    {
@@ -327,9 +545,46 @@ static void send_private_message(Client *clients, Response *res, int actual)
    }
 }
 
-static void send_group_message(Client *clients, Response *res, int actual)
+static void send_group_message(Client *clients, Client *sender, Response *res, int actual)
 {
-
+   Group *group = getGroup(res->message.receiver);
+   if (group == NULL)
+   {
+      res->type = ERROR;
+      res->paramCount = 1;
+      strcpy(res->params[0], "Group doesn't exist");
+      write_client(sender->sock, res);
+      return;
+   }
+   /* Check if the sender is a member of the group */
+   int i = 0;
+   for (i = 0; i < group->memberCount; i++)
+   {
+      if (!strcmp(group->members[i], sender->name))
+      {
+         break;
+      }
+   }
+   if (i == group->memberCount)
+   {
+      res->type = ERROR;
+      res->paramCount = 1;
+      strcpy(res->params[0], "You are not a member of this group");
+      write_client(sender->sock, res);
+      return;
+   }
+   for (i = 0; i < group->memberCount; i++)
+   {
+      printf("Member: %s", group->members[i]);
+      for (int j = 0; j < actual; j++)
+      {
+         if (!strcmp(clients[j].name, group->members[i]))
+         {
+            printf("Sending message to %s\n", clients[j].name);
+            write_client(clients[j].sock, res);
+         }
+      }
+   }
 }
 
 static int init_connection(void)

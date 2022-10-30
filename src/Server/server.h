@@ -31,19 +31,19 @@ typedef struct in_addr IN_ADDR;
 #define CRLF        "\r\n"
 #define PORT         1977
 #define MAX_CLIENTS     100
-
 #define BUF_SIZE    1024
+#define MAX_INVITATIONS 10
 
 typedef struct
 {
    SOCKET sock;
-   char name[BUF_SIZE];
-   char password[BUF_SIZE];
+   char name[20];
+   char password[20];
    int logged;
-   int invitations[10];
-   int nbInvitations;
-   int group
-}Client;
+   char invitations[MAX_INVITATIONS][20];
+   int invitationCount;
+   int group;
+} Client;
 
 static void init(void);
 static void end(void);
@@ -58,16 +58,21 @@ static void clear_clients(Client *clients, int actual);
 static void handle_request(Client *clients, Client *sender, Request *req, int actual);
 static void handle_login(Client* clients, int actual, Client *sender, Request *req);
 static void handle_register(Client *sender, Request *req);
-static void handle_create(Client *sender, Request *req);
 
+static void handle_create_group(Client *sender, Request *req);
+static void handle_join_group(Client *client, Request *req);
+static void handle_invite_user(Client *clients, Client *sender, Request *req, int actual);
 
 static void handle_message(Client *clients, Client *sender, Message msg, int actual);
 static void send_public_message(Client *clients, Response *res, int actual);
-static void send_private_message(Client *clients, Response *res, int actual);
-static void send_group_message(Client *clients, Response *res, int actual);
+static void send_private_message(Client *clients, Client *sender, Response *res, int actual);
+static void send_group_message(Client *clients, Client *sender, Response *res, int actual);
 
 static Client* getClient(char * username);
-static int saveClient(Client cl);
+static void saveClient(Client cl);
+
+static Group* getGroup(char * groupName);
+static void saveGroup(Group group);
 
 
 #endif /* guard */
