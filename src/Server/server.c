@@ -278,7 +278,7 @@ static void handle_login(Client *client, Request *req)
    strncpy(password, req->params[1], BUF_SIZE - 1);
    Response res;
    int i=0;
-   for(int i=0; i<actual; i++){
+   for(i=0; i<actual; i++){
       /* Check if user is already logged in */
       if(!strcmp(clients[i].name,name)){
          res.type = ERROR;
@@ -297,6 +297,15 @@ static void handle_login(Client *client, Request *req)
          strcpy(res.params[0], "Login successful");
          strcpy(client->name, name);
          client->logged = 1;
+
+         /* Notify the client if he have any pending invitation */
+         for (i = 0; i< clTemp->invitationCount; i++)
+         {
+            char buf[BUF_SIZE];
+            sprintf(buf, "You have an invitation to join group %s", clTemp->invitations[i]);
+            strcpy(res.params[i+1], buf);
+            res.paramCount++;
+         }
       }else{
          res.type = ERROR;
          res.paramCount = 1;
@@ -601,12 +610,10 @@ static void send_group_message(Client *sender, Response *res)
    }
    for (i = 0; i < group->memberCount; i++)
    {
-      printf("Member: %s", group->members[i]);
       for (int j = 0; j < actual; j++)
       {
          if (!strcmp(clients[j].name, group->members[i]))
          {
-            printf("Sending message to %s\n", clients[j].name);
             write_client(clients[j].sock, res);
          }
       }

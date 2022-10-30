@@ -57,7 +57,6 @@ static void app(const char *address)
       }
       else if(FD_ISSET(sock, &rdfs))
       {
-         //strcpy(response.params[0], "");
          handle_server_response(sock, &response);
       }
    }
@@ -270,7 +269,10 @@ static void handle_server_response(SOCKET sock, Response *res)
    switch (res->type)
    {
    case OK:
-      printf(GRN "%s" RESET "\n", res->params[0]);
+      for (int i = 0; i < res->paramCount; i++)
+      {
+         printf(GRN "%s" RESET "\n", res->params[i]);
+      }
       break;
    case MESSAGE: 
       if (res->message.type == PUBLIC_MESSAGE) printf( "[%s on public]: %s\n", res->message.sender, res->message.content);
@@ -278,7 +280,10 @@ static void handle_server_response(SOCKET sock, Response *res)
       else if(res->message.type == GROUP_MESSAGE) printf("[%s on %s]: %s\n", res->message.sender, res->message.receiver, res->message.content);
       break;
    case ERROR:
-      printf(RED "Error : %s" RESET "\n", res->params[0]);
+      for (int i = 0; i < res->paramCount; i++)
+      {
+         printf(RED "Error : %s" RESET "\n", res->params[i]);
+      }
       break;
    default:
       break;
