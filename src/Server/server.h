@@ -73,8 +73,10 @@ static void saveClient(Client cl);
 
 static Group* getGroup(char * groupName);
 static void saveGroup(Group group);
-static void addUnreadMessage(char* username, Message msg);
-static void readUnreadMessages(char* username, int nbMsg);
 
+static void addUnreadMessage(char* username, Message msg);
+static void readUnreadMessages(char* username);
+static void readUnreadNotifications(char* username);
+static void addUnreadNotification(char* username, Response res);
 
 #endif /* guard */
