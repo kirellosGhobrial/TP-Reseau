@@ -23,10 +23,9 @@ typedef enum
 typedef struct
 {
   message_type type;
-  char sender[20];
-  char receiver[20];
+  char sender[NAME_SIZE];
+  char receiver[NAME_SIZE];
   char content[BUF_SIZE];
-  int group;
 } Message;
 
 typedef enum

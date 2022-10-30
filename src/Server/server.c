@@ -232,32 +232,42 @@ static void saveGroup(Group group){
 
 static void handle_request(Client *sender, Request *req)
 {
-   switch(req->type)
-   {
-      case USER_LOGIN:
-         handle_login( sender, req);
-         break;
-      case USER_REGISTER:
-         handle_register(sender, req);
-         break;
-      case SEND_MESSAGE:
-         handle_message( sender, req->message);
-         break;
-      case CREATE_GROUP:
-         handle_create_group(sender, req);
-         break;
-      case JOIN_GROUP:
-         handle_join_group(sender, req);
-         break;
-      case INVITE_USER:
-         handle_invite_user(clients, sender, req, actual);
-         break;
-      case LIST_USERS:
-         // handle_list_users(sender);
-         break;
-      default:
-         break;
+   if(sender->logged == 0 && req->type == USER_REGISTER ){
+      handle_register(sender, req);
    }
+   else if(sender->logged == 0 && req->type == USER_LOGIN ){
+      handle_login(sender, req);
+   }
+   else if(sender->logged == 0 && req->type != USER_REGISTER){
+      Response res;
+      res.type = ERROR;
+      res.paramCount = 1;
+      strcpy(res.params[0], "You are not logged in, please log in or register");
+      write_client(sender->sock, &res);
+   }
+   else if(sender->logged == 1){
+      switch(req->type)
+      {
+         case SEND_MESSAGE:
+            handle_message( sender, req->message);
+            break;
+         case CREATE_GROUP:
+            handle_create_group(sender, req);
+            break;
+         case JOIN_GROUP:
+            handle_join_group(sender, req);
+            break;
+         case INVITE_USER:
+            handle_invite_user(sender, req);
+            break;
+         case LIST_USERS:
+            // handle_list_users(sender);
+            break;
+         default:
+            break;
+      }
+   }
+   
 }
 
 static void handle_login(Client *client, Request *req)
@@ -358,7 +368,7 @@ static void handle_create_group(Client *client, Request *req)
    write_client(client->sock, &res);
 }
 
-static void handle_invite_user(Client *clients, Client *sender, Request *req, int actual)
+static void handle_invite_user(Client *sender, Request *req)
 {
    char groupName[20];
    char username[20];
@@ -399,6 +409,16 @@ static void handle_invite_user(Client *clients, Client *sender, Request *req, in
                   res.type = ERROR;
                   res.paramCount = 1;
                   strcpy(res.params[0], "User already in group");
+                  write_client(sender->sock, &res);
+                  return;
+               }
+            }
+            //check if the user is already invited
+            for(int k=0; k < client->invitationCount; k++){
+               if(!strcmp(client->invitations[k],group->name)){
+                  res.type = ERROR;
+                  res.paramCount = 1;
+                  strcpy(res.params[0], "User already invited to the group");
                   write_client(sender->sock, &res);
                   return;
                }
@@ -503,10 +523,10 @@ static void handle_message(Client *sender, Message msg)
          send_public_message( &res);
          break;
       case PRIVATE_MESSAGE:
-         send_private_message( &res);
+         send_private_message(sender, &res);
          break;
       case GROUP_MESSAGE:
-         send_group_message( &res);
+         send_group_message(sender, &res);
          break;
       default:
          break;
@@ -549,8 +569,9 @@ static void send_private_message(Client *sender, Response *res)
    if(getClient(res->message.receiver)){
       addUnreadMessage(res->message.receiver, res->message);
    }
+}
 
-static void send_group_message(Client *clients, Client *sender, Response *res, int actual)
+static void send_group_message(Client *sender, Response *res)
 {
    Group *group = getGroup(res->message.receiver);
    if (group == NULL)

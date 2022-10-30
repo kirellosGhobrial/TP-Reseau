@@ -61,7 +61,7 @@ static void handle_register(Client *sender, Request *req);
 
 static void handle_create_group(Client *sender, Request *req);
 static void handle_join_group(Client *client, Request *req);
-static void handle_invite_user(Client *clients, Client *sender, Request *req, int actual);
+static void handle_invite_user(Client *sender, Request *req);
 
 static void handle_message( Client *sender, Message msg);
 static void send_public_message( Response *res);
