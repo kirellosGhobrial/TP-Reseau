@@ -31,8 +31,8 @@ typedef struct in_addr IN_ADDR;
 #define CRLF        "\r\n"
 #define PORT         1977
 #define MAX_CLIENTS     100
-
 #define BUF_SIZE    1024
+#define MAX_INVITATIONS 10
 
 typedef struct
 {
@@ -40,7 +40,7 @@ typedef struct
    char name[20];
    char password[20];
    int logged;
-   char *invitations[10]; // Name of the group invited to
+   char invitations[MAX_INVITATIONS][20];
    int invitationCount;
    int group;
 } Client;
@@ -65,8 +65,8 @@ static void handle_invite_user(Client *clients, Client *sender, Request *req, in
 
 static void handle_message(Client *clients, Client *sender, Message msg, int actual);
 static void send_public_message(Client *clients, Response *res, int actual);
-static void send_private_message(Client *clients, Response *res, int actual);
-static void send_group_message(Client *clients, Response *res, int actual);
+static void send_private_message(Client *clients, Client *sender, Response *res, int actual);
+static void send_group_message(Client *clients, Client *sender, Response *res, int actual);
 
 static Client* getClient(char * username);
 static void saveClient(Client cl);

@@ -314,6 +314,7 @@ static void handle_register(Client *client, Request *req)
    if(clTemp == NULL){
       strcpy(client->name, name);
       strcpy(client->password, password);
+      client->invitationCount = 0;
       client->logged = 1;
 
       saveClient(*client);
@@ -339,7 +340,7 @@ static void handle_create_group(Client *client, Request *req)
    {
       group = (Group *)malloc(sizeof(Group));
       strcpy(group->name, groupName);
-      group->members[0] = client->name;
+      strcpy(group->members[0], client->name);
       group->memberCount = 1;
       saveGroup(*group);
       res.type = OK;
@@ -399,7 +400,7 @@ static void handle_invite_user(Client *clients, Client *sender, Request *req, in
                   return;
                }
             }
-            client->invitations[client->invitationCount] = group->name;
+            strcpy(client->invitations[client->invitationCount], group->name);
             client->invitationCount++;
             saveClient(*client);
             res.type = OK;
@@ -463,10 +464,10 @@ static void handle_join_group(Client *sender, Request *req)
    {
       if (!strcmp(client->invitations[i], groupName))
       {
-         group->members[group->memberCount] = client->name;
+         strcpy(group->members[group->memberCount], client->name);
          group->memberCount++;
          saveGroup(*group);
-         client->invitations[i] = client->invitations[client->invitationCount - 1];
+         strcpy(client->invitations[i], client->invitations[client->invitationCount - 1]);
          client->invitationCount--;
          saveClient(*client);
          res.type = OK;
@@ -499,10 +500,10 @@ static void handle_message(Client *clients, Client *sender, Message msg, int act
          send_public_message(clients, &res, actual);
          break;
       case PRIVATE_MESSAGE:
-         send_private_message(clients, &res, actual);
+         send_private_message(clients, sender, &res, actual);
          break;
       case GROUP_MESSAGE:
-         send_group_message(clients, &res, actual);
+         send_group_message(clients, sender, &res, actual);
          break;
       default:
          break;
@@ -522,8 +523,17 @@ static void send_public_message(Client *clients, Response *res, int actual)
    }
 }
 
-static void send_private_message(Client *clients, Response *res, int actual)
+static void send_private_message(Client *clients, Client *sender, Response *res, int actual)
 {
+   Client *client = getClient(res->message.receiver);
+   if (client == NULL)
+   {
+      res->type = ERROR;
+      res->paramCount = 1;
+      strcpy(res->params[0], "User doesn't exist");
+      write_client(sender->sock, res);
+      return;
+   }
    int i = 0;
    for(i=0; i<actual; i++)
    {
@@ -535,7 +545,7 @@ static void send_private_message(Client *clients, Response *res, int actual)
    }
 }
 
-static void send_group_message(Client *clients, Response *res, int actual)
+static void send_group_message(Client *clients, Client *sender, Response *res, int actual)
 {
    Group *group = getGroup(res->message.receiver);
    if (group == NULL)
@@ -543,15 +553,34 @@ static void send_group_message(Client *clients, Response *res, int actual)
       res->type = ERROR;
       res->paramCount = 1;
       strcpy(res->params[0], "Group doesn't exist");
-      write_client(clients[i].sock, res);
+      write_client(sender->sock, res);
       return;
    }
-   for (int i = 0; i < group->memberCount; i++)
+   /* Check if the sender is a member of the group */
+   int i = 0;
+   for (i = 0; i < group->memberCount; i++)
    {
+      if (!strcmp(group->members[i], sender->name))
+      {
+         break;
+      }
+   }
+   if (i == group->memberCount)
+   {
+      res->type = ERROR;
+      res->paramCount = 1;
+      strcpy(res->params[0], "You are not a member of this group");
+      write_client(sender->sock, res);
+      return;
+   }
+   for (i = 0; i < group->memberCount; i++)
+   {
+      printf("Member: %s", group->members[i]);
       for (int j = 0; j < actual; j++)
       {
          if (!strcmp(clients[j].name, group->members[i]))
          {
+            printf("Sending message to %s\n", clients[j].name);
             write_client(clients[j].sock, res);
          }
       }

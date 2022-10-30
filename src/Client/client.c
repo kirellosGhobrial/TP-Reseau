@@ -193,13 +193,30 @@ static void handle_user_input(SOCKET sock, Request *req)
       req->type = SEND_MESSAGE;
       write_server(sock, req);
    }
+   else if (strncmp(buffer, "/group", 6) == 0)
+   {
+      char *name = strtok(buffer + 6, " ");
+      char *input_msg = strtok(NULL, "");
+      req->message.type = GROUP_MESSAGE;
+      strcpy(req->message.receiver, name);
+      strcpy(req->message.content, input_msg);
+      req->type = SEND_MESSAGE;
+      write_server(sock, req);
+   }
    else if (strncmp(buffer, "/create", 7) == 0)
    {
       char *name = strtok(buffer + 7, " ");
-      req->type = CREATE_GROUP;
-      req->paramCount = 1;
-      strcpy(req->params[0], name);
-      write_server(sock, req);
+      if (name == NULL)
+      {
+         printf("Usage : /create <GroupName>\n");
+      }
+      else
+      {
+         req->type = CREATE_GROUP;
+         req->paramCount = 1;
+         strcpy(req->params[0], name);
+         write_server(sock, req);
+      }
    }
    else if (strncmp(buffer, "/invite", 7) == 0)
    {
@@ -221,10 +238,17 @@ static void handle_user_input(SOCKET sock, Request *req)
    else if (strncmp(buffer, "/join", 5) == 0)
    {
       char *name = strtok(buffer + 5, " ");
-      req->type = JOIN_GROUP;
-      req->paramCount = 1;
-      strcpy(req->params[0], name);
-      write_server(sock, req);
+      if (name == NULL)
+      {
+         printf("Usage : /join <GroupName>\n");
+      }
+      else
+      {
+         req->type = JOIN_GROUP;
+         req->paramCount = 1;
+         strcpy(req->params[0], name);
+         write_server(sock, req);
+      }
    }
    else
    {
