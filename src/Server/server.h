@@ -78,5 +78,10 @@ static void addUnreadMessage(char* username, Message msg);
 static void readUnreadMessages(char* username);
 static void readUnreadNotifications(char* username);
 static void addUnreadNotification(char* username, Response res);
+static void logRequest(Client* cl, Request* req);
+static void logResponse(Client* cl, Response* res);
+
+static Client* findClient(SOCKET sk);
+
 
 #endif /* guard */

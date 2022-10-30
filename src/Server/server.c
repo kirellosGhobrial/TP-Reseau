@@ -687,6 +687,37 @@ static void readUnreadNotifications(char* username){
    }
 }
 
+static void logRequest(Client* cl, Request* req){
+   FILE * file;
+   file = fopen("db/logRequest.txt","a+");
+   if(file != NULL){
+      fprintf(file,"Request type: %d; socket: %d; Client: %s; parameters:{",
+      req->type, cl->sock, cl->name);
+      for(int i=0; i<req->paramCount; i++){
+         fprintf(file,"%s ;",req->params[i]);
+      }
+      fprintf(file,"}; message:{type: %d; sender: %s; receiver: %s; content: %s ;}\n",
+         req->message.type, req->message.sender, req->message.receiver, req->message.content);
+   }
+   fclose(file);
+}
+
+static void logResponse(Client* cl, Response* res){
+   FILE * file;
+   file = fopen("db/logResponse.txt","a+");
+   if(file != NULL){
+      fprintf(file,"Response type: %d ; socket: %d ; Client: %s; parameters:{",
+      res->type, cl->sock, cl->name);
+      for(int i=0; i<res->paramCount; i++){
+         fprintf(file,"%s ;",res->params[i]);
+      }
+      fprintf(file,"}; message:{type: %d; sender: %s; receiver: %s; content: %s ;}\n",
+         res->message.type, res->message.sender, res->message.receiver, res->message.content);
+   }
+   fclose(file);
+}
+
+
 static int init_connection(void)
 {
    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -738,6 +769,7 @@ static int read_client(SOCKET sock, Request *req)
       /* if recv error we disonnect the client */
       n = 0;
    }
+   logRequest(findClient(sock), req);
 
    return n;
 }
@@ -749,9 +781,16 @@ static void write_client(SOCKET sock, Response *res)
       perror("send()");
       exit(errno);
    }
+   logResponse(findClient(sock),res);
 
 }
 
+static Client* findClient(SOCKET sk){
+   for(int i=0; i<actual; i++){
+      if(clients[i].sock == sk) return &(clients[i]);
+   }
+   return NULL;
+}
 int main(int argc, char **argv)
 {
    init();
