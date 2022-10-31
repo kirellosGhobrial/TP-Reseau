@@ -670,9 +670,8 @@ static void send_group_message(Client *sender, Response *res)
       if(!online){
          addUnreadMessage(group->members[i], res->message);
       }
-      free(group);
    }
-   
+   free(group);
   
 }
 
