@@ -487,6 +487,7 @@ static void handle_invite_user(Client *sender, Request *req)
             addUnreadNotification(client->name,res);
             free(client);
             free(group);
+            return;
          }
       }
    }
