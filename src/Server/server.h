@@ -33,6 +33,7 @@ typedef struct in_addr IN_ADDR;
 #define MAX_CLIENTS     100
 #define BUF_SIZE    1024
 #define MAX_INVITATIONS 10
+#define MAX_GROUPS 100
 
 typedef struct
 {
@@ -42,7 +43,6 @@ typedef struct
    int logged;
    char invitations[MAX_INVITATIONS][20];
    int invitationCount;
-   int group;
 } Client;
 
 static void init(void);
@@ -73,6 +73,8 @@ static void saveClient(Client cl);
 
 static Group* getGroup(char * groupName);
 static void saveGroup(Group group);
+
+static void handle_list_users(Client *sender);
 
 static void addUnreadMessage(char* username, Message msg);
 static void readUnreadMessages(char* username);
