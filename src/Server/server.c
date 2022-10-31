@@ -714,8 +714,7 @@ static void readUnreadMessages(char* username){
                if (strcmp (clients[i].name, username) == 0)
                {
                   write_client (clients[i].sock, &res);
-                  free(clSender);
-                  return;
+                  break;
                }
             }
             free(clSender);
