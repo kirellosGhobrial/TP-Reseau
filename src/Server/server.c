@@ -179,7 +179,9 @@ static void saveClient(Client cl){
          }
          fclose(file);
       }
+      free(clTemp);
    }
+   
    
 }
 
@@ -225,6 +227,7 @@ static void saveGroup(Group group){
          }
          fclose(file);
       }
+      free(groupTemp);
    }
 }
 
@@ -320,11 +323,12 @@ static void handle_login(Client *client, Request *req)
             strcpy(res.params[i+1], buf);
             res.paramCount++;
          }
+         free(clTemp);
       }else{
          res.type = ERROR;
          res.paramCount = 1;
          strcpy(res.params[0], "Login failed, incorrect password");
-      }
+      }  
    }else{
       res.type = ERROR;
       res.paramCount = 1;
@@ -365,6 +369,7 @@ static void handle_register(Client *client, Request *req)
       res.type = ERROR;
       res.paramCount = 1;
       strcpy(res.params[0], "Username already exists");
+      free(clTemp);
    }
    write_client(client->sock, &res);
 }
@@ -384,11 +389,13 @@ static void handle_create_group(Client *client, Request *req)
       saveGroup(*group);
       res.type = OK;
       strcpy(res.params[0], "Group created successfully");
+      free(group);
    }
    else
    {
       res.type = ERROR;
       strcpy(res.params[0], "Group already exists");
+      free(group);
    }
    res.paramCount = 1;
    write_client(client->sock, &res);
@@ -436,6 +443,7 @@ static void handle_invite_user(Client *sender, Request *req)
                   res.paramCount = 1;
                   strcpy(res.params[0], "User already in group");
                   write_client(sender->sock, &res);
+                  free(client);
                   return;
                }
             }
@@ -446,6 +454,7 @@ static void handle_invite_user(Client *sender, Request *req)
                   res.paramCount = 1;
                   strcpy(res.params[0], "User already invited to the group");
                   write_client(sender->sock, &res);
+                  free(client);
                   return;
                }
             }
@@ -470,12 +479,14 @@ static void handle_invite_user(Client *sender, Request *req)
                if (!strcmp(clients[i].name, client->name))
                {
                   write_client(clients[i].sock, &res);
+                  free(group);
                   return;
                }
             }
             //if he is not
             addUnreadNotification(client->name,res);
-            return;         
+            free(client);
+            free(group);
          }
       }
    }
@@ -508,6 +519,7 @@ static void handle_join_group(Client *sender, Request *req)
          res.paramCount = 1;
          strcpy(res.params[0], "You are already a member of this group");
          write_client(sender->sock, &res);
+         free(group);
          return;
       }
    }
@@ -527,9 +539,13 @@ static void handle_join_group(Client *sender, Request *req)
          res.paramCount = 1;
          strcpy(res.params[0], "You have joined the group successfully");
          write_client(sender->sock, &res);
+         free(client);
+         free(group);
          return;
       }
    }
+   free(group);
+   free(client);
    res.type = ERROR;
    res.paramCount = 1;
    strcpy(res.params[0], "You have not been invited to this group");
@@ -596,12 +612,16 @@ static void send_private_message(Client *sender, Response *res)
       if (strcmp (clients[i].name, res->message.receiver) == 0)
       {
          write_client (clients[i].sock, res);
+         free(client);
          return;
       }
    }
-   if(getClient(res->message.receiver)){
+   Client* clTemp = getClient(res->message.receiver);
+   if(clTemp != NULL){
       addUnreadMessage(res->message.receiver, res->message);
+      free(clTemp);
    }
+   free(client);
 }
 
 static void send_group_message(Client *sender, Response *res)
@@ -630,6 +650,7 @@ static void send_group_message(Client *sender, Response *res)
       res->paramCount = 1;
       strcpy(res->params[0], "You are not a member of this group");
       write_client(sender->sock, res);
+      free(group);
       return;
    }
 
@@ -648,13 +669,15 @@ static void send_group_message(Client *sender, Response *res)
       if(!online){
          addUnreadMessage(group->members[i], res->message);
       }
+      free(group);
    }
    
   
 }
 
 static void addUnreadMessage(char* username, Message msg){
-   if(getClient(username)){
+   Client* clTemp = getClient(username);
+   if(clTemp != NULL){
       FILE * file;
       char dest[BUF_SIZE];
       strcpy(dest,"db/unreadMessages/");
@@ -662,6 +685,7 @@ static void addUnreadMessage(char* username, Message msg){
       file = fopen(dest,"ab+");
       fwrite(&msg,sizeof(Message),1,file);
       fclose(file);
+      free(clTemp);
    }
 }
 
@@ -690,19 +714,22 @@ static void readUnreadMessages(char* username){
                if (strcmp (clients[i].name, username) == 0)
                {
                   write_client (clients[i].sock, &res);
-                  return;
+                  break;
                }
             }
+            free(clSender);
          }
       }
       freopen(dest,"w", file);
       fclose(file);
+      free(clTemp);
    }
 }
 
 
 static void addUnreadNotification(char* username, Response res){
-   if(getClient(username)){
+   Client *cl = getClient(username);
+   if(cl!=NULL){
       FILE * file;
       char dest[BUF_SIZE];
       strcpy(dest,"db/unreadNotifications/");
@@ -710,6 +737,7 @@ static void addUnreadNotification(char* username, Response res){
       file = fopen(dest,"ab+");
       fwrite(&res,sizeof(Response),1,file);
       fclose(file);
+      free(cl);
    }
 }
 
@@ -734,6 +762,7 @@ static void readUnreadNotifications(char* username){
       }
       freopen(dest,"w", file);
       fclose(file);
+      free(cl);
    }
 }
 
