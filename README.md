@@ -30,6 +30,7 @@ Pour se connecter à son compte :
 | Creation d'un groupe | ```/create <groupname>``` |Creation d'un nouveau groupe | 
 | Invitation à rejoindre un groupe | ```/invite <groupname> <username>``` |Toute personne membre d'un groupe, pourra inviter un autre utilisateur à rejoindre le groupe. Si l'invité est déconnecté au moment de l'envoi, celui ne recevra la notification d'invitation qu'une fois reconnecté | 
 | Rejoindre un groupe | ```/join <groupname>``` |Un utilisateur pourra rejoindre un groupe seulement si ce dernier y a été invité | 
+| Lister tous les membres en ligne | ```/list_users ``` |Afficher tous les utilisateurs en ligne en ce moment |
 <hr>
 <br>
 La commande ci-dessous permet de lister toutes les commandes possibles : 
@@ -43,7 +44,7 @@ La commande ci-dessous permet de lister toutes les commandes possibles :
 
 Afin de réaliser la communication entre le serveur et le client, nous avions procédé de la manière suivante :<br>
 
-- Le client peut envoyé une requête au serveur via l'objet **Request** : 
+- Le client peut envoyer une requête au serveur via l'objet **Request** : 
 ```c
 typedef struct{
   request_type type;                        // Le type de la requête
