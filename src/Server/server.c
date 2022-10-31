@@ -369,7 +369,7 @@ static void handle_register(Client *client, Request *req)
       res.type = ERROR;
       res.paramCount = 1;
       strcpy(res.params[0], "Username already exists");
-      free(clTemp)
+      free(clTemp);
    }
    write_client(client->sock, &res);
 }
@@ -729,7 +729,7 @@ static void readUnreadMessages(char* username){
 
 
 static void addUnreadNotification(char* username, Response res){
-   Client *cl = getClient(username)
+   Client *cl = getClient(username);
    if(cl!=NULL){
       FILE * file;
       char dest[BUF_SIZE];
