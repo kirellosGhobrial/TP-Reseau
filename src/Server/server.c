@@ -537,6 +537,7 @@ static void handle_join_group(Client *sender, Request *req)
    return;
 }
 
+
 static void handle_message(Client *sender, Message msg)
 {
    Response res;
@@ -561,6 +562,8 @@ static void handle_message(Client *sender, Message msg)
       default:
          break;
    }
+
+   
 }
 
 static void send_public_message(Response *res)
@@ -569,7 +572,7 @@ static void send_public_message(Response *res)
    for(i = 0; i < actual; i++)
    {
       /* we don't send message to the sender */
-      if(strcmp (clients[i].name, res->message.sender) != 0 && clients[i].logged==1 )
+      if(clients[i].logged==1 )
       {
          write_client(clients[i].sock, res);
       }
@@ -629,16 +632,25 @@ static void send_group_message(Client *sender, Response *res)
       write_client(sender->sock, res);
       return;
    }
+
    for (i = 0; i < group->memberCount; i++)
    {
+      int online =0;
       for (int j = 0; j < actual; j++)
       {
          if (!strcmp(clients[j].name, group->members[i]))
          {
             write_client(clients[j].sock, res);
+            online=1;
+            break;
          }
       }
+      if(!online){
+         addUnreadMessage(group->members[i], res->message);
+      }
    }
+   
+  
 }
 
 static void addUnreadMessage(char* username, Message msg){
@@ -665,12 +677,29 @@ static void readUnreadMessages(char* username){
       Message msg;
       while(fread(&msg,sizeof(Message),1,file)){
          clSender = getClient(msg.sender);
-         if(clSender != NULL)  handle_message(clSender,msg);
+         if(clSender != NULL) {
+            Response res;
+            res.type = MESSAGE;
+            res.paramCount = 0;
+            strcpy(res.message.content, msg.content);
+            strcpy(res.message.receiver, msg.receiver);
+            strcpy(res.message.sender, msg.sender);
+            res.message.type = msg.type;
+            for(int i=0; i<actual; i++)
+            {
+               if (strcmp (clients[i].name, username) == 0)
+               {
+                  write_client (clients[i].sock, &res);
+                  return;
+               }
+            }
+         }
       }
       freopen(dest,"w", file);
       fclose(file);
    }
 }
+
 
 static void addUnreadNotification(char* username, Response res){
    if(getClient(username)){
@@ -803,8 +832,8 @@ static void write_client(SOCKET sock, Response *res)
       exit(errno);
    }
    logResponse(findClient(sock),res);
-
 }
+
 
 static Client* findClient(SOCKET sk){
    for(int i=0; i<actual; i++){
