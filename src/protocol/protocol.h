@@ -36,8 +36,7 @@ typedef enum
   JOIN_GROUP,
   INVITE_USER,
   SEND_MESSAGE,
-  LIST_USERS,
-  LIST_GROUPS
+  LIST_USERS
 } request_type;
 
 typedef struct

@@ -6,8 +6,6 @@
 #include "server.h"
 Client clients[MAX_CLIENTS];
 int actual = 0;
-Group groups[100];
-int groupCount = 0;
 
 static void init(void)
 {
@@ -261,13 +259,29 @@ static void handle_request(Client *sender, Request *req)
             handle_invite_user(sender, req);
             break;
          case LIST_USERS:
-            // handle_list_users(sender);
+            handle_list_users(sender);
             break;
          default:
             break;
       }
    }
-   
+}
+
+static void handle_list_users(Client *sender)
+{
+   Response res;
+   res.type = OK;
+   strcpy(res.params[0], "List of connected users : ");
+   res.paramCount = 1;
+   int i = 0;
+   for (i = 0; i < actual; i++)
+   {
+      if(clients[i].logged == 1){
+         strcpy(res.params[res.paramCount], clients[i].name);
+         res.paramCount++;
+      }
+   }
+   write_client(sender->sock, &res);
 }
 
 static void handle_login(Client *client, Request *req)

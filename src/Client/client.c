@@ -146,7 +146,7 @@ static void handle_user_input(SOCKET sock, Request *req)
       printf("\t Usage: /register <username> <password>\n");
       printf("/private : Send a private message to a user\n");
       printf("\t Usage: /private <username> <message>\n");
-      printf("public : Send a public message to all users\n");
+      printf("/public : Send a public message to all users\n");
       printf("\t Usage: /public <message>\n");
       printf("/group : Send a message to a group\n");
       printf("\t Usage: /group <groupname> <message>\n");
@@ -157,7 +157,6 @@ static void handle_user_input(SOCKET sock, Request *req)
       printf("/invite : Invite a user to a group\n");
       printf("\t Usage: /invite <groupname> <username>\n");
       printf("/list_users: list all connected users\n");
-      printf("/list_groups: list groups you are in\n");
       printf("/quit: quit the program\n");
    }
    else if (strncmp(buffer, "/register", 9) == 0)
@@ -293,11 +292,6 @@ static void handle_user_input(SOCKET sock, Request *req)
    else if (strncmp(buffer, "/list_users", 11) == 0)
    {
       req->type = LIST_USERS;
-      write_server(sock, req);
-   }
-   else if (strncmp(buffer, "/list_groups", 12) == 0)
-   {
-      req->type = LIST_GROUPS;
       write_server(sock, req);
    }
    else
