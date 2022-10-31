@@ -138,7 +138,27 @@ static void handle_user_input(SOCKET sock, Request *req)
    }
    else if (strncmp(buffer, "/help", 5) == 0)
    {
-      // /help
+      printf("Commands:\n");
+      printf("/help: display this help\n");
+      printf("/login: Login to your account\n");
+      printf("\t Usage: /login <username> <password>\n");
+      printf("/register: Create a new account\n");
+      printf("\t Usage: /register <username> <password>\n");
+      printf("/private : Send a private message to a user\n");
+      printf("\t Usage: /private <username> <message>\n");
+      printf("public : Send a public message to all users\n");
+      printf("\t Usage: /public <message>\n");
+      printf("/group : Send a message to a group\n");
+      printf("\t Usage: /group <groupname> <message>\n");
+      printf("/create : Create a new group\n");
+      printf("\t Usage: /create <groupname>\n");
+      printf("/join : Join a group\n");
+      printf("\t Usage: /join <groupname>\n");
+      printf("/invite : Invite a user to a group\n");
+      printf("\t Usage: /invite <groupname> <username>\n");
+      printf("/list_users: list all connected users\n");
+      printf("/list_groups: list groups you are in\n");
+      printf("/quit: quit the program\n");
    }
    else if (strncmp(buffer, "/register", 9) == 0)
    {
@@ -178,29 +198,50 @@ static void handle_user_input(SOCKET sock, Request *req)
    {
       char *name = strtok(buffer + 8, " ");
       char *input_msg = strtok(NULL, "");
-      req->message.type = PRIVATE_MESSAGE;
-      strcpy(req->message.receiver, name);
-      strcpy(req->message.content, input_msg);
-      req->type = SEND_MESSAGE;
-      write_server(sock, req);
+      if (name == NULL || input_msg == NULL)
+      {
+         printf("Usage : /private <name> <message>\n");
+      }
+      else
+      {   
+         req->message.type = PRIVATE_MESSAGE;
+         strcpy(req->message.receiver, name);
+         strcpy(req->message.content, input_msg);
+         req->type = SEND_MESSAGE;
+         write_server(sock, req);
+      }
    }
    else if (strncmp(buffer, "/public", 7) == 0)
    {
       char *input_msg = strtok(buffer + 7, "");
-      req->message.type = PUBLIC_MESSAGE;
-      strcpy(req->message.content, input_msg);
-      req->type = SEND_MESSAGE;
-      write_server(sock, req);
+      if (input_msg == NULL)
+      {
+         printf("Usage : /public <message>\n");
+      }
+      else
+      {
+         req->message.type = PUBLIC_MESSAGE;
+         strcpy(req->message.content, input_msg);
+         req->type = SEND_MESSAGE;
+         write_server(sock, req);
+      }
    }
    else if (strncmp(buffer, "/group", 6) == 0)
    {
       char *name = strtok(buffer + 6, " ");
       char *input_msg = strtok(NULL, "");
-      req->message.type = GROUP_MESSAGE;
-      strcpy(req->message.receiver, name);
-      strcpy(req->message.content, input_msg);
-      req->type = SEND_MESSAGE;
-      write_server(sock, req);
+      if (name == NULL || input_msg == NULL)
+      {
+         printf("Usage : /group <groupname> <message>\n");
+      }
+      else
+      {
+         req->message.type = GROUP_MESSAGE;
+         strcpy(req->message.receiver, name);
+         strcpy(req->message.content, input_msg);
+         req->type = SEND_MESSAGE;
+         write_server(sock, req);
+      }
    }
    else if (strncmp(buffer, "/create", 7) == 0)
    {
@@ -223,7 +264,7 @@ static void handle_user_input(SOCKET sock, Request *req)
       char *user_name = strtok(NULL, "");
       if (group_name == NULL || user_name == NULL)
       {
-         printf("Usage : /invite <group_name> <user_name>\n");
+         printf("Usage : /invite <groupname> <username>\n");
       }
       else
       {
@@ -239,7 +280,7 @@ static void handle_user_input(SOCKET sock, Request *req)
       char *name = strtok(buffer + 5, " ");
       if (name == NULL)
       {
-         printf("Usage : /join <GroupName>\n");
+         printf("Usage : /join <groupname>\n");
       }
       else
       {
@@ -249,10 +290,19 @@ static void handle_user_input(SOCKET sock, Request *req)
          write_server(sock, req);
       }
    }
+   else if (strncmp(buffer, "/list_users", 11) == 0)
+   {
+      req->type = LIST_USERS;
+      write_server(sock, req);
+   }
+   else if (strncmp(buffer, "/list_groups", 12) == 0)
+   {
+      req->type = LIST_GROUPS;
+      write_server(sock, req);
+   }
    else
    {
-      printf(RED "Unknown command : %s" RESET "\n", buffer);
-      printf("Type /help to see the list of available commands.\n");
+      printf("Invalid command. Type /help for a list of commands.\n");
    }
 }
 
@@ -275,9 +325,9 @@ static void handle_server_response(SOCKET sock, Response *res)
       }
       break;
    case MESSAGE: 
-      if (res->message.type == PUBLIC_MESSAGE) printf( "[%s on public]: %s\n", res->message.sender, res->message.content);
-      else if(res->message.type == PRIVATE_MESSAGE) printf("[%s on private]: %s\n", res->message.sender, res->message.content);
-      else if(res->message.type == GROUP_MESSAGE) printf("[%s on %s]: %s\n", res->message.sender, res->message.receiver, res->message.content);
+      if (res->message.type == PUBLIC_MESSAGE) printf( BLU BOLD "[%s on public]: " RESET "%s\n", res->message.sender, res->message.content);
+      else if(res->message.type == PRIVATE_MESSAGE) printf( BLU BOLD "[%s on private]: " RESET "%s\n", res->message.sender, res->message.content);
+      else if(res->message.type == GROUP_MESSAGE) printf( BLU BOLD "[%s on %s]: " RESET "%s\n", res->message.sender, res->message.receiver, res->message.content);
       break;
    case ERROR:
       for (int i = 0; i < res->paramCount; i++)

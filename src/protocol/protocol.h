@@ -34,10 +34,10 @@ typedef enum
   USER_REGISTER,
   CREATE_GROUP,
   JOIN_GROUP,
-  LEAVE_GROUP,
   INVITE_USER,
   SEND_MESSAGE,
-  LIST_USERS
+  LIST_USERS,
+  LIST_GROUPS
 } request_type;
 
 typedef struct
