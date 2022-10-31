@@ -26,10 +26,10 @@ Pour se connecter à son compte :
 | --------------- | ----------- |--------- |
 |Envoi d'un message public | ```/public <message> ```| Un message est envoyé à tous les utilisateurs connectés  |
 |Envoi d'un message privé | ```/private <username> <message>``` | Un message est envoyé à un seul utilisateur. Si le destinataire est déconnecté au moment de l'envoi, celui ne recevra le message qu'une fois reconnecté | 
-| Envoi d'un message dans un groupe | ```/group <groupname> <message>``` |Un message est envoyé à tous les membres du groupe connectés au moment de l'envoie | 
+| Envoi d'un message dans un groupe | ```/group <groupname> <message>``` |Un message est envoyé à tous les membres du groupe. Si un destinataire est déconnecté au moment de l'envoi, celui ne recevra le message qu'une fois reconnecté | 
 | Creation d'un groupe | ```/create <groupname>``` |Creation d'un nouveau groupe | 
-| Invitation à rejoindre un groupe | ```/invite <groupname> <username>``` |Toute personne membre d'un groupe, pourra inviter un autre utilisateur à rejoindre le groupe | 
-| Rejoindre un groupe | ```/join <groupname>``` |Un utilisateur pourra rejoindre un groupe selement si ce dernier y a été invité | 
+| Invitation à rejoindre un groupe | ```/invite <groupname> <username>``` |Toute personne membre d'un groupe, pourra inviter un autre utilisateur à rejoindre le groupe. Si l'invité est déconnecté au moment de l'envoi, celui ne recevra la notification d'invitation qu'une fois reconnecté | 
+| Rejoindre un groupe | ```/join <groupname>``` |Un utilisateur pourra rejoindre un groupe seulement si ce dernier y a été invité | 
 <hr>
 <br>
 La commande ci-dessous permet de lister toutes les commandes possibles : 
