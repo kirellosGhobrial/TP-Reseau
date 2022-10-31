@@ -22,7 +22,7 @@ Pour se connecter à son compte :
 ## Liste des fonctionnalités implémentées
 <br>
 
-| Fonctionnalités | <div style="width:230px">Commandes</div> | Détails |
+| Fonctionnalités | <div style="width:180px">Commandes</div> | Détails |
 | --------------- | ----------- |--------- |
 |Envoi d'un message public | ```/public <message> ```| Un message est envoyé à tous les utilisateurs connectés  |
 |Envoi d'un message privé | ```/private <username> <message>``` | Un message est envoyé à un seul utilisateur. Si le destinataire est déconnecté au moment de l'envoi, celui ne recevra le message qu'une fois reconnecté | 
